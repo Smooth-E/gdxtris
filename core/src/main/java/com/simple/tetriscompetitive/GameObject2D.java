@@ -1,5 +1,6 @@
 package com.simple.tetriscompetitive;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
@@ -8,6 +9,8 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.Widget;
+import com.badlogic.gdx.utils.Align;
 
 public class GameObject2D extends Texture {
 
@@ -126,5 +129,13 @@ public class GameObject2D extends Texture {
 
     public GameObject2D(TextureData data) {
         super(data);
+    }
+
+    public static boolean checkContains(Widget widget) {
+        int x = Gdx.input.getX(), y = Gdx.input.getY();
+        return widget.getX(Align.bottomLeft) <= x &&
+                x <= widget.getX(Align.bottomLeft) &&
+                y >= widget.getY(Align.bottomLeft) &&
+                y <= widget.getY(Align.bottomLeft);
     }
 }

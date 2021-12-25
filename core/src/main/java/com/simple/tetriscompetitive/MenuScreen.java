@@ -46,8 +46,10 @@ public class MenuScreen implements Screen {
         objects.add(new GameObject2D(pixmap, x + 20, y + 10 + oldHeight + 20 + oldHeight / 2f));
         pixmap.dispose();
         pixmap = Drawing.createRoundedRectangle(w, h, cornerRadius, GameSuper.palette.onSecondary);
-        objects.add(new GameObject2D(pixmap, x + 20, y + 20));
+        objects.add(new GameObject2D(pixmap, x + 20, y + 20)); // Connect button
+        connectButton = objects.get(objects.size() - 1);
         objects.add(new GameObject2D(pixmap, x + 20, y + 20 + oldHeight + 20));
+        hostButton = objects.get(objects.size() - 1);
         pixmap.dispose();
 
         Pixmap userPic = new Pixmap((int) (340 * ratioWidth) + 20, (int) (340 * ratioWidth) + 20, Pixmap.Format.RGBA8888);
@@ -61,12 +63,43 @@ public class MenuScreen implements Screen {
         h = (int)(150 * ratioHeight);
         pixmap = Drawing.createRoundedRectangle(w, h, cornerRadius, GameSuper.palette.onSecondary);
         objects.add(new GameObject2D(pixmap, 100, screenHeight - h - 100 - userPic.getHeight() - 20));
+        GameObject2D playerNameBG = objects.get(objects.size() - 1);
         pixmap.dispose();
         userPic.dispose();
-    }
 
-    public static void load(){
+        FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        parameter.color = GameSuper.palette.secondary;
+        parameter.size = connectButton.getHeight() - (int)(40 * ratioHeight) - 30;
+        BitmapFont font = GameSuper.mainFontGenerator.generateFont(parameter);
 
+        Label.LabelStyle style = new Label.LabelStyle(font, Color.WHITE);
+
+        connectButtonLabel = new Label("CONNECT", style);
+        connectButtonLabel.setSize(connectButton.getWidth(), connectButton.getHeight());
+        connectButtonLabel.setAlignment(Align.center);
+        connectButtonLabel.setPosition(connectButton.getX(), connectButton.getY(), Align.bottomLeft);
+        stage.addActor(connectButtonLabel);
+
+        hostButtonLabel = new Label("HOST", style);
+        hostButtonLabel.setSize(connectButtonLabel.getWidth(), connectButtonLabel.getHeight());
+        hostButtonLabel.setPosition(hostButton.getX(), hostButton.getY());
+        hostButtonLabel.setAlignment(Align.center);
+        stage.addActor(hostButtonLabel);
+
+        parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        parameter.size = (playerNameBG.getWidth() - 40) / 10;
+        parameter.color = GameSuper.palette.secondary;
+        font = GameSuper.mainFontGenerator.generateFont(parameter);
+
+        TextField.TextFieldStyle textFieldStyle = new TextField.TextFieldStyle();
+        textFieldStyle.font = font;
+        textFieldStyle.fontColor = Color.WHITE;
+
+        playerNameTextField = new TextField("Some Text", textFieldStyle);
+        playerNameTextField.setAlignment(Align.center);
+        playerNameTextField.setPosition(playerNameBG.getX(), playerNameBG.getY());
+        playerNameTextField.setSize(playerNameBG.getWidth(), playerNameBG.getHeight());
+        stage.addActor(playerNameTextField);
     }
 
     @Override
@@ -75,6 +108,15 @@ public class MenuScreen implements Screen {
         Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         Gdx.gl.glClearColor(c.r,c.g,c.b,1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
+
+        if (Gdx.input.justTouched()) {
+            int mouseX = Gdx.input.getX(), mouseY = Gdx.input.getY();
+            if (GameObject2D.checkContains(playerNameTextField) || true) {
+                stage.setKeyboardFocus(playerNameTextField);
+                playerNameTextField.getOnscreenKeyboard().show(true);
+            }
+        }
+
 
         spriteBatch.begin();
         for (GameObject2D o : objects) spriteBatch.draw(o);

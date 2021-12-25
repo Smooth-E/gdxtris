@@ -54,7 +54,6 @@ public class LoadingScreen implements Screen {
     static class LoadAssetsThread extends Thread {
         @Override
         public void run() {
-            MenuScreen.load();
             LoadingScreen.status = true;
         }
     }
