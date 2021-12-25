@@ -1,16 +1,19 @@
 package com.simple.tetriscompetitive;
 
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.TextField;
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.Align;
 
 import java.util.ArrayList;
@@ -91,15 +94,84 @@ public class MenuScreen implements Screen {
         parameter.color = GameSuper.palette.secondary;
         font = GameSuper.mainFontGenerator.generateFont(parameter);
 
+        pixmap = Drawing.createRoundedRectangle(10, (int)font.getLineHeight(), 5, GameSuper.palette.secondary);
+
         TextField.TextFieldStyle textFieldStyle = new TextField.TextFieldStyle();
         textFieldStyle.font = font;
         textFieldStyle.fontColor = Color.WHITE;
+        textFieldStyle.cursor = new TextureRegionDrawable(new Texture(pixmap));
+        textFieldStyle.messageFontColor = textFieldStyle.fontColor;
+        textFieldStyle.messageFont = textFieldStyle.font;
 
-        playerNameTextField = new TextField("Some Text", textFieldStyle);
+        playerNameTextField = new TextField(DataManagement.data.nickname, textFieldStyle);
         playerNameTextField.setAlignment(Align.center);
         playerNameTextField.setPosition(playerNameBG.getX(), playerNameBG.getY());
         playerNameTextField.setSize(playerNameBG.getWidth(), playerNameBG.getHeight());
         stage.addActor(playerNameTextField);
+
+        parameter.size = connectButton.getHeight() / 3 + 1;
+        parameter.color = GameSuper.palette.onSecondary;
+
+        font = GameSuper.mainFontGenerator.generateFont(parameter);
+
+        pixmap = Drawing.createRoundedRectangle(10,(int)font.getLineHeight(), 5, GameSuper.palette.onSecondary);
+
+        TextField.TextFieldStyle bigTextFieldStyle = new TextField.TextFieldStyle();
+        bigTextFieldStyle.font = font;
+        bigTextFieldStyle.messageFont = font;
+        bigTextFieldStyle.cursor = new TextureRegionDrawable(new Texture(pixmap));
+        bigTextFieldStyle.fontColor = Color.WHITE;
+        bigTextFieldStyle.messageFontColor = Color.WHITE;
+
+        remoteHostNameTextField = new TextField("", bigTextFieldStyle);
+        remoteHostNameTextField.setMessageText("ROOM IP");
+        remoteHostNameTextField.setAlignment(Align.center);
+        remoteHostNameTextField.setPosition(connectButton.getX(), connectButton.getY() + connectButton.getHeight() + 10, Align.bottomLeft);
+        remoteHostNameTextField.setSize(connectButton.getWidth(), connectButton.getHeight());
+        remoteHostNameTextField.setOnscreenKeyboard(new TextField.OnscreenKeyboard() {
+            @Override
+            public void show(boolean visible) {
+                Gdx.input.getTextInput(new Input.TextInputListener() {
+                    @Override
+                    public void input(String text) {
+                        if (!text.equals("")) remoteHostNameTextField.setText(text);
+                        stage.unfocus(remoteHostNameTextField);
+                    }
+
+                    @Override
+                    public void canceled() {
+
+                    }
+                }, "Enter the host name you want to connect to:", "", "192.168.0.1");
+            }
+        });
+        stage.addActor(remoteHostNameTextField);
+
+        roomNameTextField = new TextField("", bigTextFieldStyle);
+        roomNameTextField.setAlignment(Align.center);
+        roomNameTextField.setPosition(hostButton.getX(), hostButton.getY() + 10 + hostButton.getHeight(), Align.bottomLeft);
+        roomNameTextField.setSize(hostButton.getWidth(), hostButton.getHeight());
+        roomNameTextField.setMessageText("ROOM NAME");
+        roomNameTextField.setOnscreenKeyboard(new TextField.OnscreenKeyboard() {
+            @Override
+            public void show(boolean visible) {
+                Gdx.input.getTextInput(new Input.TextInputListener() {
+                    @Override
+                    public void input(String text) {
+                        if (!text.equals("")) roomNameTextField.setText(text);
+                        stage.unfocus(roomNameTextField);
+                    }
+
+                    @Override
+                    public void canceled() {
+
+                    }
+                }, "Enter room name:", "", "Sample Room");
+            }
+        });
+        stage.addActor(roomNameTextField);
+
+        Gdx.input.setInputProcessor(stage);
     }
 
     @Override
@@ -111,10 +183,23 @@ public class MenuScreen implements Screen {
 
         if (Gdx.input.justTouched()) {
             int mouseX = Gdx.input.getX(), mouseY = Gdx.input.getY();
-            if (GameObject2D.checkContains(playerNameTextField) || true) {
+
+            if (GameObject2D.checkContains(playerNameTextField)) {
                 stage.setKeyboardFocus(playerNameTextField);
                 playerNameTextField.getOnscreenKeyboard().show(true);
             }
+            else {
+                stage.unfocus(playerNameTextField);
+                playerNameTextField.getOnscreenKeyboard().show(false);
+            }
+        }
+
+        if (playerNameTextField.hasKeyboardFocus()) playerNameTextField.getOnscreenKeyboard().show(true);
+
+        if (!playerNameTextField.getText().equals(DataManagement.data.nickname) && playerNameTextField.getText().length() > 0){
+            DataManagement.data.nickname = playerNameTextField.getText();
+            DataManagement.saveData();
+            playerNameTextField.setMessageText(DataManagement.data.nickname);
         }
 
 

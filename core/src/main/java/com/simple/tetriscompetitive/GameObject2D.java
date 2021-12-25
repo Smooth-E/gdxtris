@@ -132,10 +132,8 @@ public class GameObject2D extends Texture {
     }
 
     public static boolean checkContains(Widget widget) {
-        int x = Gdx.input.getX(), y = Gdx.input.getY();
-        return widget.getX(Align.bottomLeft) <= x &&
-                x <= widget.getX(Align.bottomLeft) &&
-                y >= widget.getY(Align.bottomLeft) &&
-                y <= widget.getY(Align.bottomLeft);
+        int x = Gdx.input.getX(), y = Gdx.graphics.getHeight() - Gdx.input.getY();
+        float wx = widget.getX(Align.bottomLeft), wy = widget.getY(Align.bottomLeft);
+        return x >= wx && x <= wx + widget.getWidth() && y >= wy && y <= wy + widget.getHeight();
     }
 }
