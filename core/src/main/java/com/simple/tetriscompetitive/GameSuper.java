@@ -23,12 +23,20 @@ public class GameSuper extends Game {
     };
 
     public static FreeTypeFontGenerator mainFontGenerator;
+    public static Palette palette = palettes[0];
+
+    public static GameSuper instance;
+
+    public static MenuScreen menuScreen;
 
     @Override
     public void create() {
+        instance = this;
         mainFontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("Product Sans Regular.ttf"));
         DataManagement.loadData();
-        MenuScreen menuScreen = new MenuScreen(this);
-        setScreen(menuScreen);
+        palette = palettes[DataManagement.data.colorSchemeIndex];
+        menuScreen = new MenuScreen();
+        LoadingScreen loadingScreen = new LoadingScreen();
+        setScreen(loadingScreen);
     }
 }
