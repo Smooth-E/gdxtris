@@ -32,11 +32,11 @@ public class MenuScreen implements Screen {
         int margin = screenWidth / 20;
         int buttonWidth = screenWidth - 2 * margin;
         int buttonHeight = (int)((screenHeight - margin) / 5) - margin;
-        playOnlineButton     = new GameObject2D(Drawing.createButtonPixmap(buttonWidth, buttonHeight), margin, screenHeight - (buttonHeight * 1 + margin * 1));
-        playLANButton        = new GameObject2D(Drawing.createButtonPixmap(buttonWidth, buttonHeight), margin, screenHeight - (buttonHeight * 2 + margin * 2));
-        playSoloButton       = new GameObject2D(Drawing.createButtonPixmap(buttonWidth, buttonHeight), margin, screenHeight - (buttonHeight * 3 + margin * 3));
-        playerSettingsButton = new GameObject2D(Drawing.createButtonPixmap(buttonWidth, buttonHeight), margin, screenHeight - (buttonHeight * 4 + margin * 4));
-        exitButton           = new GameObject2D(Drawing.createButtonPixmap(buttonWidth, buttonHeight), margin, screenHeight - (buttonHeight * 5 + margin * 5));
+        playOnlineButton     = new GameObject2D(Drawing.createButtonPixmap(buttonWidth, buttonHeight, 20), margin, screenHeight - (buttonHeight * 1 + margin * 1));
+        playLANButton        = new GameObject2D(Drawing.createButtonPixmap(buttonWidth, buttonHeight, 20), margin, screenHeight - (buttonHeight * 2 + margin * 2));
+        playSoloButton       = new GameObject2D(Drawing.createButtonPixmap(buttonWidth, buttonHeight, 20), margin, screenHeight - (buttonHeight * 3 + margin * 3));
+        playerSettingsButton = new GameObject2D(Drawing.createButtonPixmap(buttonWidth, buttonHeight, 20), margin, screenHeight - (buttonHeight * 4 + margin * 4));
+        exitButton           = new GameObject2D(Drawing.createButtonPixmap(buttonWidth, buttonHeight, 20), margin, screenHeight - (buttonHeight * 5 + margin * 5));
 
         FreeTypeFontGenerator.FreeTypeFontParameter buttonFontParameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
         buttonFontParameter.size = buttonWidth / "play via lan".length();

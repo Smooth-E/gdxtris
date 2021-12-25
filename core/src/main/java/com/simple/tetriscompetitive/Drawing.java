@@ -35,9 +35,9 @@ public class Drawing {
     public static final float shadowSize = 0.03f;
     public static final int cornerRadius = 50;
 
-    public static Pixmap createButtonPixmap(int width, int height) {
+    public static Pixmap createButtonPixmap(int width, int height, int shadowX, int shadowY) {
         Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
-        int segmentHeight = height - (int)(height * shadowSize), segmentWidth = width - (int)(width * shadowSize);
+        int segmentHeight = height - shadowX, segmentWidth = width - shadowY;
         Pixmap background = createRoundedRectangle(segmentWidth, segmentHeight, cornerRadius,
                 GameSuper.palettes[DataManagement.data.colorSchemeIndex].onSecondary);
         Pixmap foreground = createRoundedRectangle(segmentWidth, segmentHeight, cornerRadius,
@@ -45,9 +45,21 @@ public class Drawing {
         for(int x = 0; x < segmentWidth; x++) {
             for(int y = 0; y < segmentHeight; y++){
                 pixmap.drawPixel(x, y, background.getPixel(x, y));
-                pixmap.drawPixel(x + (int)(width * shadowSize), y + (int)(height * shadowSize), foreground.getPixel(x, y));
+                pixmap.drawPixel(x + shadowX, y + shadowX, foreground.getPixel(x, y));
             }
         }
         return pixmap;
+    }
+
+    public static Pixmap createButtonPixmap(int width, int height, int shadowXY){
+        return createButtonPixmap(width, height, shadowXY, shadowXY);
+    }
+
+    public static Pixmap createButtonPixmap(int width, int height, float shadowPercentX, float shadowPercentY){
+        return createButtonPixmap(width, height, width * shadowPercentX, height * shadowPercentY);
+    }
+
+    public static Pixmap createButtonPixmap(int width, int height, float shadowPercentXY){
+        return createButtonPixmap(width, height, width * shadowPercentXY, height * shadowPercentXY);
     }
 }
