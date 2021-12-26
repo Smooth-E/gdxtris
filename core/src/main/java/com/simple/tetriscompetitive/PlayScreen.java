@@ -129,13 +129,31 @@ public class PlayScreen implements Screen {
         pixmap.fill();
         playSateObjects.add(new GameObject2D(pixmap, 0, screenHeight - 50 * ratioHeight - pixmap.getHeight()));
 
-        w = (screenWidth - playFieldWidth) / 2 - 20 - 20;
-        pixmap = Drawing.createRoundedRectangle(w * 2, w, Math.min(margin, w / 2), GameSuper.palette.onPrimary);
-        pixmap.drawPixmap(Drawing.createRoundedRectangle(pixmap.getWidth() - 2,
-                pixmap.getHeight() - 2, Math.min(margin, w), GameSuper.palette.secondary), 0, 0);
-        float x = (screenWidth - playFieldWidth) / 2f;
-        y = (screenHeight - playFieldHeight - 100 * ratioHeight);
-        playSateObjects.add(new GameObject2D(pixmap, x - pixmap.getWidth() / 2f - 20, y + playFieldHeight - pixmap.getHeight() - 1));
+        float x = 50;
+        y = screenHeight - playFieldHeight - 100 * ratioHeight;
+
+        w = screenWidth - (int)x * 2 - playFieldWidth - 20;
+        pixmap = Drawing.createRoundedRectangle(w * 2, w, margin, GameSuper.palette.onPrimary);
+        pixmap.drawPixmap(Drawing.createRoundedRectangle(pixmap.getWidth() - 1,
+                pixmap.getHeight() - 1, margin, GameSuper.palette.secondary), 0, 0);
+        playSateObjects.add(new GameObject2D(pixmap,
+                x + 20 + playFieldWidth - pixmap.getWidth() / 2f, y + playFieldHeight - pixmap.getHeight() - 1));
+        holdBG = playSateObjects.get(playSateObjects.size() - 1);
+
+        pixmap = Drawing.createRoundedRectangle(pixmap.getWidth(), pixmap.getHeight() * 3, margin, GameSuper.palette.onPrimary);
+        pixmap.drawPixmap(Drawing.createRoundedRectangle(pixmap.getWidth() - 1, pixmap.getHeight() - 1,
+                10, GameSuper.palette.secondary), 0, 0);
+        playSateObjects.add(new GameObject2D(pixmap, holdBG.getX(), holdBG.getY() - holdBG.getHeight() * 3 - margin));
+        nextPieceBG = playSateObjects.get(playSateObjects.size() - 1);
+
+        w = Math.min(playFieldHeight - 2 * margin - holdBG.getHeight() - nextPieceBG.getHeight() - margin,
+                screenWidth - playFieldWidth - (int)x - margin * 4);
+        pixmap = new Pixmap(w, w, Pixmap.Format.RGBA8888);
+        pixmap.setColor(GameSuper.palette.primary);
+        pixmap.fillCircle(pixmap.getWidth() / 2, pixmap.getHeight() / 2, w / 2);
+        pixmap.drawPixmap(new Pixmap(Gdx.files.internal("help.png")),
+                0, 0, 1000, 1000, 0, 0, w, w);
+        playSateObjects.add(new GameObject2D(pixmap, holdBG.getX() + holdBG.getWidth() / 2f + margin * 2, y));
 
         Gdx.input.setInputProcessor(stage);
     }
@@ -154,7 +172,7 @@ public class PlayScreen implements Screen {
             for (GameObject2D o : playSateObjects) spriteBatch.draw(o);
 
             field = new GameObject2D(playFieldPixmap, 0, 0);
-            field.setX((screenWidth - field.getWidth()) / 2f);
+            field.setX(50 * ratioWidth + 20);
             field.setY(screenHeight - field.getHeight() - 100 * ratioHeight);
             spriteBatch.draw(field);
 
