@@ -136,4 +136,8 @@ public class GameObject2D extends Texture {
         float wx = widget.getX(Align.bottomLeft), wy = widget.getY(Align.bottomLeft);
         return x >= wx && x <= wx + widget.getWidth() && y >= wy && y <= wy + widget.getHeight();
     }
+
+    public boolean contains(){
+        return this.contains(Gdx.input.getX(), Gdx.graphics.getHeight() - Gdx.input.getY());
+    }
 }

@@ -140,7 +140,7 @@ public class MenuScreen implements Screen {
 
                     @Override
                     public void canceled() {
-
+                        stage.unfocus(remoteHostNameTextField);
                     }
                 }, "Enter the host name you want to connect to:", "", "192.168.0.1");
             }
@@ -164,7 +164,7 @@ public class MenuScreen implements Screen {
 
                     @Override
                     public void canceled() {
-
+                        stage.unfocus(roomNameTextField);
                     }
                 }, "Enter room name:", "", "Sample Room");
             }
@@ -191,6 +191,16 @@ public class MenuScreen implements Screen {
             else {
                 stage.unfocus(playerNameTextField);
                 playerNameTextField.getOnscreenKeyboard().show(false);
+            }
+
+            if (connectButton.contains() && !remoteHostNameTextField.getText().equals("")) {
+                if (NetworkingManager.startClient(remoteHostNameTextField.getText()))
+                    GameSuper.instance.setScreen(new PlayScreen(false));
+            }
+
+            if (hostButton.contains() && !roomNameTextField.getText().equals("")){
+                if (NetworkingManager.startHost(roomNameTextField.getText()))
+                    GameSuper.instance.setScreen(new PlayScreen(true));
             }
         }
 

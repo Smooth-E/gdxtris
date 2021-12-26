@@ -38,5 +38,6 @@ public class GameSuper extends Game {
         menuScreen = new MenuScreen();
         LoadingScreen loadingScreen = new LoadingScreen();
         setScreen(loadingScreen);
+        //setScreen(new PlayScreen(true));
     }
 }
