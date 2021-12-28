@@ -14,6 +14,7 @@ public class Networking {
         public int score = 0, stack = 10, id, targetID = -1;
         public int[][] field = new int[10][22];
         public int figureID, figureRotation, figureX, figureY;
+        public boolean canPlay = false;
     }
 
     public static class Room {
@@ -48,6 +49,32 @@ public class Networking {
         public ConnectionResponse(){}
     }
 
+    public static class StartGameRequest {}
+
+    public static class UpdatedGameStateRequest {
+
+        PlayerContainer playerState;
+
+        public UpdatedGameStateRequest(){
+            this.playerState = NetworkingManager.playerInfo;
+        }
+
+        public UpdatedGameStateRequest (PlayerContainer player) {
+            this.playerState = player;
+        }
+    }
+
+    public static class  UpdatedGameStateResponse{
+
+        Room roomInfo;
+
+        public UpdatedGameStateResponse(){}
+
+        public UpdatedGameStateResponse(Room roomInfo) {
+            this.roomInfo = roomInfo;
+        }
+    }
+
     public static class ClientListener extends Listener {
         @Override
         public void received(Connection connection, Object object) {
@@ -58,6 +85,17 @@ public class Networking {
                 NetworkingManager.playerInfo.id = response.playerID;
                 NetworkingManager.clientSideRoom = response.roomInfo;
                 Gdx.app.log("NETWORK", "Received a response!\n" + NetworkingManager.playerInfo.toString());
+            }
+            else if (object instanceof UpdatedGameStateResponse) {
+                UpdatedGameStateResponse response = (UpdatedGameStateResponse) object;
+                NetworkingManager.clientSideRoom = response.roomInfo;
+                for (int i = 0; i < NetworkingManager.clientSideRoom.players.size(); i++){
+                    if (NetworkingManager.clientSideRoom.players.get(i).id == NetworkingManager.playerInfo.id) {
+                        PlayerContainer playerOnServer = NetworkingManager.clientSideRoom.players.get(i);
+                        NetworkingManager.playerInfo.canPlay = playerOnServer.canPlay;
+                        NetworkingManager.playerInfo.stack = playerOnServer.stack;
+                    }
+                }
             }
         }
     }
@@ -87,6 +125,40 @@ public class Networking {
                 response.playerID = id;
                 response.roomInfo = NetworkingManager.roomInfo;
                 connection.sendTCP(response);
+            }
+            else if (object instanceof StartGameRequest) {
+                for (int i = 0; i < NetworkingManager.roomInfo.players.size(); i++){
+                    NetworkingManager.roomInfo.players.get(i).canPlay = true;
+                }
+                new StartGameThread().start();
+            }
+            else if (object instanceof UpdatedGameStateRequest) {
+                UpdatedGameStateRequest request = (UpdatedGameStateRequest) object;
+                for (int i = 0; i < NetworkingManager.roomInfo.players.size(); i++){
+                    if (NetworkingManager.roomInfo.players.get(i).id == request.playerState.id) {
+                        NetworkingManager.roomInfo.players.set(i, request.playerState);
+                        break;
+                    }
+                }
+                UpdatedGameStateResponse response = new UpdatedGameStateResponse(NetworkingManager.roomInfo);
+            }
+        }
+    }
+
+    static class StartGameThread extends Thread {
+        @Override
+        public void run() {
+            try {
+                NetworkingManager.roomInfo.status = Room.STATUS_CD1;
+                Thread.sleep(1000);
+                NetworkingManager.roomInfo.status = Room.STATUS_CD2;
+                Thread.sleep(1000);
+                NetworkingManager.roomInfo.status = Room.STATUS_CD3;
+                Thread.sleep(1000);
+                NetworkingManager.roomInfo.status = Room.STATUS_PLAYING;
+            }
+            catch (java.lang.InterruptedException exception) {
+                Gdx.app.log("ERROR", "Error in status thread!");
             }
         }
     }

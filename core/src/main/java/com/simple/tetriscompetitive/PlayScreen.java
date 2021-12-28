@@ -5,10 +5,15 @@ import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.utils.Align;
 
 import java.util.ArrayList;
+
+import javax.swing.GroupLayout;
 
 public class PlayScreen implements Screen {
 
@@ -32,8 +37,10 @@ public class PlayScreen implements Screen {
     GameObject2D instantPlaceButton, exchangeButton;
     GameObject2D playField;
     GameObject2D holdBG, nextPieceBG;
+    GameObject2D gameStatusOverlay, startGameButton;
     Pixmap playFieldPixmap;
-    Label statsLabel;
+    Label statsLabel, startGameLabel;
+    Stage playStateStage = new Stage();
 
     @Override
     public void show() {
@@ -155,7 +162,73 @@ public class PlayScreen implements Screen {
                 0, 0, 1000, 1000, 0, 0, w, w);
         playSateObjects.add(new GameObject2D(pixmap, holdBG.getX() + holdBG.getWidth() / 2f + margin * 2, y));
 
+        x = 50 * ratioWidth + 20;
+
+        pixmap = new Pixmap(playFieldWidth, playFieldHeight / 3, Pixmap.Format.RGBA8888);
+        Color color = new Color(GameSuper.palette.onPrimary);
+        color.a = .5f;
+        pixmap.setColor(color);
+        pixmap.fill();
+        gameStatusOverlay = new GameObject2D(pixmap, x, y + playFieldHeight / 3f);
+
+        w = gameStatusOverlay.getWidth() / 4 * 3;
+
+        FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        parameter.size = w / "START GAME".length();
+        parameter.color = GameSuper.palette.secondary;
+
+        BitmapFont font = GameSuper.mainFontGenerator.generateFont(parameter);
+
+        pixmap = Drawing.createRoundedRectangle(w, (int)font.getLineHeight() + margin, margin, GameSuper.palette.onPrimary);
+        pixmap.drawPixmap(Drawing.createRoundedRectangle(pixmap.getWidth() - 6, pixmap.getHeight() - 6,
+                margin - 3, GameSuper.palette.primary), 3, 3);
+        startGameButton = new GameObject2D(pixmap,
+                gameStatusOverlay.getX() + (gameStatusOverlay.getWidth() - pixmap.getWidth()) / 2f,
+                gameStatusOverlay.getY() + margin);
+
+        Label.LabelStyle labelStyle = new Label.LabelStyle(font, Color.WHITE);
+
+        startGameLabel = new Label("START GAME!", labelStyle);
+        startGameLabel.setSize(startGameButton.getWidth(), startGameButton.getHeight());
+        startGameLabel.setAlignment(Align.center);
+        startGameLabel.setPosition(startGameButton.getX(), startGameButton.getY(), Align.bottomLeft);
+        playStateStage.addActor(startGameLabel);
+
+        h = gameStatusOverlay.getHeight() - startGameButton.getHeight() - 3 * margin;;
+
+        parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        parameter.size = h - 2 * margin;
+        parameter.color = GameSuper.palette.primary;
+        parameter.borderColor = GameSuper.palette.onPrimary;
+        parameter.borderWidth = 3;
+        parameter.characters = "0123456789snthd";
+
+        font = GameSuper.mainFontGenerator.generateFont(parameter);
+
+        labelStyle = new Label.LabelStyle(font, Color.WHITE);
+
+        statsLabel = new Label("4th", labelStyle);
+        statsLabel.setPosition(startGameButton.getX(),
+                startGameButton.getY() + margin * 2, Align.bottomLeft);
+        statsLabel.setAlignment(Align.center);
+        statsLabel.setSize(startGameButton.getWidth(), h);
+        statsLabel.setAlignment(Align.center);
+        playStateStage.addActor(statsLabel);
+
+        statsLabel.setText(getNumberWithSuffix(NetworkingManager.roomInfo.players.size()));
+
         Gdx.input.setInputProcessor(stage);
+    }
+
+    private String getNumberWithSuffix(int number){
+        switch (number % 10){
+            case 1:
+                return Integer.toString(number) + "st";
+            case 2:
+                return Integer.toString(number) + "nd";
+            default:
+                return Integer.toString(number) + "th";
+        }
     }
 
     @Override
@@ -165,11 +238,35 @@ public class PlayScreen implements Screen {
         Gdx.gl.glClearColor(c.r,c.g,c.b,1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
-        GameObject2D field = null, stack = null;
+        startGameButton.setActive(NetworkingManager.roomInfo.status == Networking.Room.STATUS_IDLE && isAdmin);
+        startGameLabel.setVisible(startGameButton.isActive());
+
+        switch (NetworkingManager.roomInfo.status) {
+            case Networking.Room.STATUS_CD1:
+            case Networking.Room.STATUS_CD2:
+            case Networking.Room.STATUS_CD3:
+                statsLabel.setText(NetworkingManager.roomInfo.status);
+                break;
+            case Networking.Room.STATUS_PLAYING:
+                startGameLabel.setVisible(false);
+                startGameButton.setActive(false);
+                gameStatusOverlay.setActive(NetworkingManager.playerInfo.canPlay);
+                statsLabel.setVisible(NetworkingManager.playerInfo.canPlay);
+        }
+
+        //Logic
+        if (Gdx.input.justTouched()){
+            int x = Gdx.input.getX(), y = screenHeight - Gdx.input.getY();
+            if (state == STATE_PLAYING) {
+                if (startGameButton.contains()) NetworkingManager.client.sendTCP(new Networking.StartGameRequest());
+            }
+        }
 
         spriteBatch.begin();
         if (state == STATE_PLAYING) {
             for (GameObject2D o : playSateObjects) spriteBatch.draw(o);
+
+            GameObject2D field, stack;
 
             field = new GameObject2D(playFieldPixmap, 0, 0);
             field.setX(50 * ratioWidth + 20);
@@ -187,11 +284,21 @@ public class PlayScreen implements Screen {
             stack = new GameObject2D(pixmap, field.getX() - 20, field.getY());
             spriteBatch.draw(stack);
             pixmap.dispose();
-        }
-        spriteBatch.end();
 
-        if (field != null) field.dispose();
-        if (stack != null) stack.dispose();
+            spriteBatch.draw(gameStatusOverlay);
+
+            spriteBatch.draw(startGameButton);
+
+            spriteBatch.end();
+
+            field.dispose();
+            stack.dispose();
+
+            playStateStage.act();
+            playStateStage.draw();
+
+            NetworkingManager.client.sendTCP(new Networking.UpdatedGameStateRequest());
+        }
     }
 
     @Override
