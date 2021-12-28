@@ -1,5 +1,6 @@
 package com.simple.tetriscompetitive;
 
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
@@ -11,9 +12,12 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.utils.Align;
 
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
-
-import javax.swing.GroupLayout;
 
 public class PlayScreen implements Screen {
 
@@ -23,13 +27,15 @@ public class PlayScreen implements Screen {
         this.isAdmin = isAdmin;
     }
 
-    static final int STATE_PLAYING = 0, STATE_PLAYERS = 1, STATE_FIELDS = 2;
+    static final int STATE_PLAYING = 0, STATE_INFO = 1;
     int state = STATE_PLAYING;
 
     GameObject2D.MySpriteBatch spriteBatch = new GameObject2D.MySpriteBatch();
     Stage stage = new Stage();
     int screenHeight, screenWidth, margin;
     float ratioWidth, ratioHeight;
+
+    String networkAddress = "NO ADDRESS";
 
     ArrayList<GameObject2D> playSateObjects = new ArrayList<>();
     GameObject2D playStateInfoButton, playSatePlayersButton, playStateOverviewButton;
@@ -42,8 +48,24 @@ public class PlayScreen implements Screen {
     Label statsLabel, startGameLabel;
     Stage playStateStage = new Stage();
 
+    ArrayList<GameObject2D> infoStateObjects = new ArrayList<>();
+    ArrayList<Label> playerInfoLabels = new ArrayList<>(10);
+    ArrayList<GameObject2D[]> playerInfoCosmeticElements = new ArrayList<GameObject2D[]>(10);
+    Label headerLabel;
+    GameObject2D backToPlayButton;
+    Stage infoStage = new Stage();
+
     @Override
     public void show() {
+        try {
+            Socket socket = new Socket();
+            socket.connect(new InetSocketAddress("google.com", 80));
+            Gdx.app.log("INET", "Hosted / connected: " + socket.getLocalAddress());
+            networkAddress = socket.getLocalAddress().toString();
+        } catch (java.lang.Exception e) {
+            Gdx.app.log("INET", "Unable to get host name / address: " + e.toString());
+        }
+
         screenHeight = Gdx.graphics.getHeight();
         screenWidth = Gdx.graphics.getWidth();
         ratioWidth = screenWidth / 1080f;
@@ -161,6 +183,7 @@ public class PlayScreen implements Screen {
         pixmap.drawPixmap(new Pixmap(Gdx.files.internal("help.png")),
                 0, 0, 1000, 1000, 0, 0, w, w);
         playSateObjects.add(new GameObject2D(pixmap, holdBG.getX() + holdBG.getWidth() / 2f + margin * 2, y));
+        playStateInfoButton = playSateObjects.get(playSateObjects.size() - 1);
 
         x = 50 * ratioWidth + 20;
 
@@ -215,9 +238,83 @@ public class PlayScreen implements Screen {
         statsLabel.setAlignment(Align.center);
         playStateStage.addActor(statsLabel);
 
-        statsLabel.setText(getNumberWithSuffix(NetworkingManager.roomInfo.players.size()));
+        statsLabel.setText(getNumberWithSuffix(NetworkingManager.clientSideRoom.players.size()));
 
         Gdx.input.setInputProcessor(stage);
+
+        //Info Scene
+        int unitHeight = (screenHeight - 4 * margin) / 11;
+
+        pixmap = Drawing.createRoundedRectangle(screenWidth - margin * 2, unitHeight, unitHeight / 2, GameSuper.palette.onSecondary);
+        infoStateObjects.add(new GameObject2D(pixmap, margin, screenHeight - pixmap.getHeight() - 2 * margin));
+
+        pixmap = new Pixmap(unitHeight, unitHeight, Pixmap.Format.RGBA8888);
+        pixmap.drawPixmap(new Pixmap(Gdx.files.internal("left.png")), 0, 0, 1000, 1000, 0, 0, unitHeight, unitHeight);
+        backToPlayButton = new GameObject2D(pixmap, margin, infoStateObjects.get(0).getY());
+
+        parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        parameter.size = (screenWidth - 2 * margin) / (10 + " [000.000.000.000]".length()) * 2;
+        parameter.color = GameSuper.palette.secondary;
+
+        font = GameSuper.mainFontGenerator.generateFont(parameter);
+
+        labelStyle = new Label.LabelStyle(font, Color.WHITE);
+
+        StringBuilder s = new StringBuilder(NetworkingManager.clientSideRoom.name);
+        for (int i = 0; i < 28 - (NetworkingManager.clientSideRoom.name.length() + 2 + networkAddress.length()); i++)
+            s.append(" ");
+        s.append(" [").append(networkAddress).append("]");
+        headerLabel = new Label(s, labelStyle);
+        headerLabel.setSize(screenWidth - 2 * margin - backToPlayButton.getWidth(), unitHeight);
+        headerLabel.setPosition(backToPlayButton.getX() + backToPlayButton.getWidth(), backToPlayButton.getY(), Align.bottomLeft);
+        headerLabel.setAlignment(Align.center);
+        infoStage.addActor(headerLabel);
+
+        parameter.color = GameSuper.palette.onSecondary;
+
+        font = GameSuper.mainFontGenerator.generateFont(parameter);
+
+        labelStyle = new Label.LabelStyle(font, Color.WHITE);
+
+        Pixmap pic = new Pixmap(unitHeight, unitHeight, Pixmap.Format.RGBA8888);
+        pic.drawPixmap(new Pixmap(Gdx.files.internal("profile-pic.png")), 0, 0, 1000, 1000,
+                0, 0, pic.getWidth() - 2 * margin, pic.getHeight() - 2 * margin);
+        pic.setColor(GameSuper.palette.onSecondary);
+        for (int px = 0; px < pic.getWidth(); px++) {
+            for (int py = 0; py < pic.getHeight(); py++) {
+                if (pic.getPixel(px, py) != Color.CLEAR.toIntBits()) pic.drawPixel(px, py);
+            }
+        }
+
+        Pixmap eye = new Pixmap(pic.getWidth(), pic.getHeight(), Pixmap.Format.RGBA8888);
+        eye.drawPixmap(new Pixmap(Gdx.files.internal("eye.png")), 0, 0, 1000, 1000,
+                0, 0, pic.getWidth() - 2 * margin, pic.getHeight() - 2 * margin);
+        eye.setColor(GameSuper.palette.primary);
+        for (int px = 0; px < pic.getWidth(); px++) {
+            for (int py = 0; py < pic.getHeight(); py++) {
+                if (eye.getPixel(px, py) != Color.CLEAR.toIntBits()) eye.drawPixel(px, py);
+            }
+        }
+
+        Pixmap divider = new Pixmap(screenWidth - 2 * margin, 10, Pixmap.Format.RGB888);
+        divider.setColor(GameSuper.palette.primary);
+        divider.fill();
+
+        for (int i = 0; i < 10; i++){
+            Label label = new Label("some text", labelStyle);
+            label.setAlignment(Align.left);
+            label.setPosition(unitHeight, unitHeight * (9 - i));
+            label.setSize(screenWidth - unitHeight, unitHeight);
+            playerInfoLabels.add(label);
+            infoStage.addActor(playerInfoLabels.get(i));
+
+            GameObject2D[] batch = new GameObject2D[3];
+
+            batch[0] = new GameObject2D(pic, 0, unitHeight * (9 - i) - margin);
+            batch[1] = new GameObject2D(eye, screenWidth - eye.getWidth(), unitHeight * (9 - i) - margin);
+            batch[2] = new GameObject2D(divider, margin, unitHeight * (9 - i) - divider.getHeight() / 2f);
+            playerInfoCosmeticElements.add(batch);
+        }
     }
 
     private String getNumberWithSuffix(int number){
@@ -238,14 +335,16 @@ public class PlayScreen implements Screen {
         Gdx.gl.glClearColor(c.r,c.g,c.b,1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
-        startGameButton.setActive(NetworkingManager.roomInfo.status == Networking.Room.STATUS_IDLE && isAdmin);
+        Gdx.app.log("C", "client side room is null? " + (NetworkingManager.clientSideRoom == null));
+
+        startGameButton.setActive(NetworkingManager.clientSideRoom.status == Networking.Room.STATUS_IDLE && isAdmin);
         startGameLabel.setVisible(startGameButton.isActive());
 
-        switch (NetworkingManager.roomInfo.status) {
+        switch (NetworkingManager.clientSideRoom.status) {
             case Networking.Room.STATUS_CD1:
             case Networking.Room.STATUS_CD2:
             case Networking.Room.STATUS_CD3:
-                statsLabel.setText(NetworkingManager.roomInfo.status);
+                statsLabel.setText(NetworkingManager.clientSideRoom.status);
                 break;
             case Networking.Room.STATUS_PLAYING:
                 startGameLabel.setVisible(false);
@@ -259,6 +358,10 @@ public class PlayScreen implements Screen {
             int x = Gdx.input.getX(), y = screenHeight - Gdx.input.getY();
             if (state == STATE_PLAYING) {
                 if (startGameButton.contains()) NetworkingManager.client.sendTCP(new Networking.StartGameRequest());
+                else if (playStateInfoButton.contains()) state = STATE_INFO;
+            }
+            else if (state == STATE_INFO) {
+                if (backToPlayButton.contains()) state = STATE_PLAYING;
             }
         }
 
@@ -296,9 +399,32 @@ public class PlayScreen implements Screen {
 
             playStateStage.act();
             playStateStage.draw();
-
-            NetworkingManager.client.sendTCP(new Networking.UpdatedGameStateRequest());
         }
+        else if (state == STATE_INFO) {
+            for (int i = 0; i < 10; i++){
+                if (i < NetworkingManager.clientSideRoom.players.size())
+                    playerInfoLabels.get(i).setText(NetworkingManager.clientSideRoom.players.get(i).name);
+                else playerInfoLabels.get(i).setText("");
+
+                playerInfoCosmeticElements.get(i)[0].setActive(i < NetworkingManager.clientSideRoom.players.size());
+                playerInfoCosmeticElements.get(i)[1].setActive(i < NetworkingManager.clientSideRoom.players.size());
+                playerInfoCosmeticElements.get(i)[2].setActive(i < NetworkingManager.clientSideRoom.players.size());
+            }
+
+            for (GameObject2D o : infoStateObjects) spriteBatch.draw(o);
+            for (GameObject2D[] o : playerInfoCosmeticElements) {
+                spriteBatch.draw(o[0]);
+                spriteBatch.draw(o[1]);
+                spriteBatch.draw(o[2]);
+            }
+            spriteBatch.draw(backToPlayButton);
+            spriteBatch.end();
+
+            infoStage.act();
+            infoStage.draw();
+        }
+
+        NetworkingManager.client.sendTCP(new Networking.UpdatedGameStateRequest());
     }
 
     @Override

@@ -141,6 +141,7 @@ public class Networking {
                     }
                 }
                 UpdatedGameStateResponse response = new UpdatedGameStateResponse(NetworkingManager.roomInfo);
+                connection.sendTCP(response);
             }
         }
     }
@@ -149,11 +150,11 @@ public class Networking {
         @Override
         public void run() {
             try {
-                NetworkingManager.roomInfo.status = Room.STATUS_CD1;
+                NetworkingManager.roomInfo.status = Room.STATUS_CD3;
                 Thread.sleep(1000);
                 NetworkingManager.roomInfo.status = Room.STATUS_CD2;
                 Thread.sleep(1000);
-                NetworkingManager.roomInfo.status = Room.STATUS_CD3;
+                NetworkingManager.roomInfo.status = Room.STATUS_CD1;
                 Thread.sleep(1000);
                 NetworkingManager.roomInfo.status = Room.STATUS_PLAYING;
             }

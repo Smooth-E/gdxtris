@@ -55,6 +55,7 @@ public class NetworkingManager {
             client.connect(5000, address, PORT);
             Networking.ConnectionRequest request = new Networking.ConnectionRequest(DataManagement.data.nickname);
             client.sendTCP(request);
+            while (NetworkingManager.clientSideRoom == null) {}
             return true;
         }
         catch (Exception e) {
