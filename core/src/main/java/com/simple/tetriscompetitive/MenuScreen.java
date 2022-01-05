@@ -198,7 +198,7 @@ public class MenuScreen implements Screen {
                     GameSuper.instance.setScreen(new PlayScreen(false));
             }
 
-            if (hostButton.contains() && !roomNameTextField.getText().equals("")){
+            if (hostButton.contains()){
                 if (NetworkingManager.startHost(roomNameTextField.getText()))
                     GameSuper.instance.setScreen(new PlayScreen(true));
             }

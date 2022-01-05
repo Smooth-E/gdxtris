@@ -12,8 +12,8 @@ public class Networking {
     public static class PlayerContainer {
         public String name;
         public int score = 0, stack = 10, id, targetID = -1;
-        public int[][] field = new int[10][22];
-        public int figureID, figureRotation, figureX, figureY;
+        public int[][] field = new int[22][10];
+        public int figureID = 2, figureRotation, figureX, figureY, holdID, turn;
         public boolean canPlay = false;
     }
 
@@ -22,6 +22,7 @@ public class Networking {
         public String name = "Sample Room";
         public int status = STATUS_IDLE;
         public static final int STATUS_PLAYING = 0, STATUS_CD1 = 1, STATUS_CD2 = 2, STATUS_CD3 = 3, STATUS_IDLE = 4;
+        public long seed = new Random().nextLong();
 
         public Room(String name){
             this.name = name;
@@ -128,7 +129,9 @@ public class Networking {
             }
             else if (object instanceof StartGameRequest) {
                 for (int i = 0; i < NetworkingManager.roomInfo.players.size(); i++){
-                    NetworkingManager.roomInfo.players.get(i).canPlay = true;
+                    PlayerContainer p = NetworkingManager.roomInfo.players.get(i);
+                    p.canPlay = true;
+                    NetworkingManager.roomInfo.players.set(i, p);
                 }
                 new StartGameThread().start();
             }

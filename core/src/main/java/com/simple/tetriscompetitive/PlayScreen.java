@@ -30,6 +30,10 @@ public class PlayScreen implements Screen {
     static final int STATE_PLAYING = 0, STATE_INFO = 1;
     int state = STATE_PLAYING;
 
+    int previousRoomStatus = Networking.Room.STATUS_IDLE;
+
+    float timePassedFromTick = 0;
+
     GameObject2D.MySpriteBatch spriteBatch = new GameObject2D.MySpriteBatch();
     Stage stage = new Stage();
     int screenHeight, screenWidth, margin;
@@ -260,14 +264,11 @@ public class PlayScreen implements Screen {
 
         labelStyle = new Label.LabelStyle(font, Color.WHITE);
 
-        StringBuilder s = new StringBuilder(NetworkingManager.clientSideRoom.name);
-        for (int i = 0; i < 28 - (NetworkingManager.clientSideRoom.name.length() + 2 + networkAddress.length()); i++)
-            s.append(" ");
-        s.append(" [").append(networkAddress).append("]");
+        String s = "[" + networkAddress + "]";
         headerLabel = new Label(s, labelStyle);
-        headerLabel.setSize(screenWidth - 2 * margin - backToPlayButton.getWidth(), unitHeight);
+        headerLabel.setSize(screenWidth - 2 * margin - backToPlayButton.getWidth() - 2 * margin, unitHeight);
         headerLabel.setPosition(backToPlayButton.getX() + backToPlayButton.getWidth(), backToPlayButton.getY(), Align.bottomLeft);
-        headerLabel.setAlignment(Align.center);
+        headerLabel.setAlignment(Align.right);
         infoStage.addActor(headerLabel);
 
         parameter.color = GameSuper.palette.onSecondary;
@@ -335,8 +336,6 @@ public class PlayScreen implements Screen {
         Gdx.gl.glClearColor(c.r,c.g,c.b,1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
-        Gdx.app.log("C", "client side room is null? " + (NetworkingManager.clientSideRoom == null));
-
         startGameButton.setActive(NetworkingManager.clientSideRoom.status == Networking.Room.STATUS_IDLE && isAdmin);
         startGameLabel.setVisible(startGameButton.isActive());
 
@@ -349,9 +348,16 @@ public class PlayScreen implements Screen {
             case Networking.Room.STATUS_PLAYING:
                 startGameLabel.setVisible(false);
                 startGameButton.setActive(false);
-                gameStatusOverlay.setActive(NetworkingManager.playerInfo.canPlay);
-                statsLabel.setVisible(NetworkingManager.playerInfo.canPlay);
+                gameStatusOverlay.setActive(!NetworkingManager.playerInfo.canPlay);
+                statsLabel.setVisible(!NetworkingManager.playerInfo.canPlay);
         }
+
+        if (NetworkingManager.clientSideRoom.status == Networking.Room.STATUS_PLAYING &&
+                previousRoomStatus != Networking.Room.STATUS_PLAYING) {
+            Tetris.start();
+            Gdx.app.log("Some tag", "some log!");
+        }
+        previousRoomStatus = NetworkingManager.clientSideRoom.status;
 
         //Logic
         if (Gdx.input.justTouched()){
@@ -371,9 +377,25 @@ public class PlayScreen implements Screen {
 
             GameObject2D field, stack;
 
-            field = new GameObject2D(playFieldPixmap, 0, 0);
+            Pixmap newField = new Pixmap(playFieldPixmap.getWidth(), playFieldPixmap.getHeight(), playFieldPixmap.getFormat());
+            newField.drawPixmap(playFieldPixmap, 0, 0);
+
+            int cellSize = newField.getWidth() / 10;
+            int[][] figure = Tetris.getFigure();
+            newField.setColor(Tetris.figureColors[NetworkingManager.playerInfo.figureID]);
+            for (int x = 0; x < figure[0].length; x++){
+                for (int y = 0; y < figure.length; y++){
+                    if (figure[y][x] == 1) {
+                        newField.fillRectangle((NetworkingManager.playerInfo.figureX + x) * cellSize,
+                                (NetworkingManager.playerInfo.figureY + y) * cellSize, cellSize, cellSize);
+                    }
+                }
+            }
+
+            field = new GameObject2D(newField, 0, 0);
             field.setX(50 * ratioWidth + 20);
             field.setY(screenHeight - field.getHeight() - 100 * ratioHeight);
+
             spriteBatch.draw(field);
 
             Pixmap pixmap = new Pixmap(20, field.getHeight(), Pixmap.Format.RGB888);
@@ -396,6 +418,7 @@ public class PlayScreen implements Screen {
 
             field.dispose();
             stack.dispose();
+            newField.dispose();
 
             playStateStage.act();
             playStateStage.draw();
@@ -422,6 +445,12 @@ public class PlayScreen implements Screen {
 
             infoStage.act();
             infoStage.draw();
+        }
+
+        timePassedFromTick += Gdx.graphics.getDeltaTime();
+        if (timePassedFromTick >= .5) {
+            Tetris.tick();
+            timePassedFromTick = 0;
         }
 
         NetworkingManager.client.sendTCP(new Networking.UpdatedGameStateRequest());
