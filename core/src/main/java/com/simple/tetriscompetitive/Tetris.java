@@ -196,7 +196,7 @@ public class Tetris {
 
     }
 
-    public static void tick(){
+    public static boolean tick(){
         boolean shouldStop = false;
         int[][] figure = getFigure();
         for (int y = 0; y < figure.length; y++){
@@ -223,6 +223,8 @@ public class Tetris {
         }
         else
             NetworkingManager.playerInfo.figureY += 1;
+
+        return !shouldStop;
     }
 
     public static void moveLeft(){
@@ -260,15 +262,39 @@ public class Tetris {
     }
 
     public static void moveDown(){
-
+        tick();
     }
 
     public static void instantDown(){
+        while (tick()){}
+    }
 
+    private static boolean isFit(int newRotation) {
+        Networking.PlayerContainer player = NetworkingManager.playerInfo;
+        int[][] figure = figures[player.figureID][newRotation];
+        boolean canFit = true;
+        for (int x = 0; x < figure[0].length; x++) {
+            for (int y = 0; y < figure.length; y++) {
+                if (figure[y][x] == 1 &&
+                        player.field[player.figureX + x][player.figureY + y] != -1){
+                    canFit = false;
+                    break;
+                }
+            }
+        }
+        return canFit;
     }
 
     public static void rotateClockwise(){
-
+        Networking.PlayerContainer player = NetworkingManager.playerInfo;
+        int newRotation = player.figureRotation + 1;
+        if (newRotation >= 4) newRotation = 0;
+        if (isFit(newRotation)) NetworkingManager.playerInfo.figureRotation = newRotation;
+        else {
+            NetworkingManager.playerInfo.figureY -= 1;
+            if (isFit(newRotation)) NetworkingManager.playerInfo.figureRotation = newRotation;
+            else NetworkingManager.playerInfo.figureY += 1;
+        }
     }
 
     public static void rotateAnticlockwise(){

@@ -369,6 +369,9 @@ public class PlayScreen implements Screen {
                 else if (playStateInfoButton.contains()) state = STATE_INFO;
                 else if (stepLeftButton.contains()) Tetris.moveLeft();
                 else if (stepRightButton.contains()) Tetris.moveRight();
+                else if (instantPlaceButton.contains()) Tetris.instantDown();
+                else if (stepDownButton.contains()) Tetris.moveDown();
+                else if (rotateClockwiseButton.contains()) Tetris.rotateClockwise();
             }
             else if (state == STATE_INFO) {
                 if (backToPlayButton.contains()) state = STATE_PLAYING;
@@ -461,7 +464,7 @@ public class PlayScreen implements Screen {
         }
 
         timePassedFromTick += Gdx.graphics.getDeltaTime();
-        if (timePassedFromTick >= .1) {
+        if (timePassedFromTick >= .5) {
             Tetris.tick();
             timePassedFromTick = 0;
         }
