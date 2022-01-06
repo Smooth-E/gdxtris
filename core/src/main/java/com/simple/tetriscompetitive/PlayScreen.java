@@ -244,6 +244,8 @@ public class PlayScreen implements Screen {
 
         statsLabel.setText(getNumberWithSuffix(NetworkingManager.clientSideRoom.players.size()));
 
+        Tetris.generateField();
+
         Gdx.input.setInputProcessor(stage);
 
         //Info Scene
@@ -365,6 +367,8 @@ public class PlayScreen implements Screen {
             if (state == STATE_PLAYING) {
                 if (startGameButton.contains()) NetworkingManager.client.sendTCP(new Networking.StartGameRequest());
                 else if (playStateInfoButton.contains()) state = STATE_INFO;
+                else if (stepLeftButton.contains()) Tetris.moveLeft();
+                else if (stepRightButton.contains()) Tetris.moveRight();
             }
             else if (state == STATE_INFO) {
                 if (backToPlayButton.contains()) state = STATE_PLAYING;
@@ -388,6 +392,15 @@ public class PlayScreen implements Screen {
                     if (figure[y][x] == 1) {
                         newField.fillRectangle((NetworkingManager.playerInfo.figureX + x) * cellSize,
                                 (NetworkingManager.playerInfo.figureY + y) * cellSize, cellSize, cellSize);
+                    }
+                }
+            }
+
+            for (int x = 0; x < NetworkingManager.playerInfo.field[0].length; x++){
+                for (int y = 0; y < NetworkingManager.playerInfo.field.length; y++){
+                    if (NetworkingManager.playerInfo.field[y][x] >= 0) {
+                        newField.setColor(Tetris.figureColors[NetworkingManager.playerInfo.field[y][x]]);
+                        newField.fillRectangle(x * cellSize, y * cellSize, cellSize, cellSize);
                     }
                 }
             }
@@ -448,7 +461,7 @@ public class PlayScreen implements Screen {
         }
 
         timePassedFromTick += Gdx.graphics.getDeltaTime();
-        if (timePassedFromTick >= .5) {
+        if (timePassedFromTick >= .1) {
             Tetris.tick();
             timePassedFromTick = 0;
         }
