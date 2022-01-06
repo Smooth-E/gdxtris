@@ -372,6 +372,8 @@ public class PlayScreen implements Screen {
                 else if (instantPlaceButton.contains()) Tetris.instantDown();
                 else if (stepDownButton.contains()) Tetris.moveDown();
                 else if (rotateClockwiseButton.contains()) Tetris.rotateClockwise();
+                else if (rotateAntiClockwiseButton.contains()) Tetris.rotateAnticlockwise();
+                else if (rotate180Button.contains()) Tetris.rotate180();
             }
             else if (state == STATE_INFO) {
                 if (backToPlayButton.contains()) state = STATE_PLAYING;

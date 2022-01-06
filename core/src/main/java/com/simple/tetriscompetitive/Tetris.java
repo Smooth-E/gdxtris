@@ -22,13 +22,8 @@ public class Tetris {
     };
 
     static int[][][][] figures = new int[][][][] {
-            {                                       // I piece
-                    {
-                            {1},
-                            {1},
-                            {1},
-                            {1}
-                    },
+            // I piece
+            {
                     {
                             {1, 1, 1, 1}
                     },
@@ -40,7 +35,13 @@ public class Tetris {
                     },
                     {
                             {1, 1, 1, 1}
-                    }
+                    },
+                    {
+                            {1},
+                            {1},
+                            {1},
+                            {1}
+                    },
             },
             //O piece
             {
@@ -269,35 +270,49 @@ public class Tetris {
         while (tick()){}
     }
 
-    private static boolean isFit(int newRotation) {
+    public static boolean rotateClockwise(){
         Networking.PlayerContainer player = NetworkingManager.playerInfo;
-        int[][] figure = figures[player.figureID][newRotation];
-        boolean canFit = true;
-        for (int x = 0; x < figure[0].length; x++) {
-            for (int y = 0; y < figure.length; y++) {
-                if (figure[y][x] == 1 &&
-                        player.field[player.figureX + x][player.figureY + y] != -1){
-                    canFit = false;
+        int newRotation = player.figureRotation + 1;
+        if (newRotation >= 4) newRotation = 0;
+        int[][] figure = getFigure(), newFigure = figures[player.figureID][newRotation];
+
+        if (player.figureX + newFigure[0].length >= fieldWidth)
+            player.figureX = fieldWidth - newFigure[0].length;
+        if (player.figureX < 0) player.figureX = 0;
+
+        if (player.figureY + newFigure.length >= fieldHeight) player.figureY += (fieldHeight - player.figureY - newFigure.length);
+
+        boolean fits = true;
+        for (int x = 0; x < newFigure[0].length; x++) {
+            for (int y = 0; y < newFigure.length; y++) {
+                if (newFigure[y][x] == 1 && !(player.field[player.figureY + y][player.figureX + x] == -1)) {
+                    fits = false;
                     break;
                 }
             }
         }
-        return canFit;
-    }
-
-    public static void rotateClockwise(){
-        Networking.PlayerContainer player = NetworkingManager.playerInfo;
-        int newRotation = player.figureRotation + 1;
-        if (newRotation >= 4) newRotation = 0;
-        if (isFit(newRotation)) NetworkingManager.playerInfo.figureRotation = newRotation;
-        else {
-            NetworkingManager.playerInfo.figureY -= 1;
-            if (isFit(newRotation)) NetworkingManager.playerInfo.figureRotation = newRotation;
-            else NetworkingManager.playerInfo.figureY += 1;
-        }
+        player.figureRotation = newRotation;
+        if (fits) NetworkingManager.playerInfo = player;
+        return fits;
     }
 
     public static void rotateAnticlockwise(){
+        int oldRotation = NetworkingManager.playerInfo.figureRotation;
+        for (int i = 0; i < 3; i++) {
+            if (!rotateClockwise()) {
+                NetworkingManager.playerInfo.figureRotation = oldRotation;
+                break;
+            }
+        }
+    }
 
+    public static void rotate180(){
+        int oldRotation = NetworkingManager.playerInfo.figureRotation;
+        for (int i = 0; i < 2; i++) {
+            if (!rotateClockwise()) {
+                NetworkingManager.playerInfo.figureRotation = oldRotation;
+                break;
+            }
+        }
     }
 }
