@@ -150,9 +150,9 @@ public class PlayScreen implements Screen {
         int cellDimension = (int)(63.3 * ratioHeight);
         int playFieldWidth = 10 * cellDimension, playFieldHeight = 20 * cellDimension;
         playFieldPixmap = new Pixmap(playFieldWidth, playFieldHeight, Pixmap.Format.RGB888);
-        playFieldPixmap.setColor(GameSuper.palette.secondary);
+        playFieldPixmap.setColor(Color.BLACK);
         playFieldPixmap.fill();
-        playFieldPixmap.setColor(GameSuper.palette.onPrimary);
+        playFieldPixmap.setColor(GameSuper.palette.secondary);
         playFieldPixmap.drawRectangle(0, 0, playFieldWidth, playFieldHeight);
         for (int px = 0; px < 10; px++) for (int py = 0; py < 20; py++)
             playFieldPixmap.drawRectangle(px * cellDimension, py * cellDimension, cellDimension, cellDimension);
@@ -440,6 +440,35 @@ public class PlayScreen implements Screen {
                     }
                 }
             }
+
+            boolean shouldStop = false;
+            int yd = 0;
+            while (true) {
+                for (int y = 0; y < figure.length; y++) {
+                    for (int x = 0; x < figure[0].length; x++) {
+                        if (figure[y][x] == 1 &&
+                                (NetworkingManager.playerInfo.figureY + y + yd >= Tetris.fieldHeight - 1 ||
+                                        NetworkingManager.playerInfo.field[NetworkingManager.playerInfo.figureY + y + yd + 1][NetworkingManager.playerInfo.figureX + x] > -1)) {
+                            shouldStop = true;
+                            break;
+                        }
+                    }
+                }
+                if (shouldStop) break;
+                yd++;
+            }
+            Color figureColor = new Color(Tetris.figureColors[NetworkingManager.playerInfo.figureID]);
+            figureColor.a = 0.5f;
+            newField.setColor(figureColor);
+            for (int x = 0; x < figure[0].length; x++){
+                for (int y = 0; y < figure.length; y++){
+                    if (figure[y][x] == 1) {
+                        newField.fillRectangle((NetworkingManager.playerInfo.figureX + x) * cellSize,
+                                (NetworkingManager.playerInfo.figureY + y + yd) * cellSize, cellSize, cellSize);
+                    }
+                }
+            }
+
 
             field = new GameObject2D(newField, 0, 0);
             field.setX(50 * ratioWidth + 20);
