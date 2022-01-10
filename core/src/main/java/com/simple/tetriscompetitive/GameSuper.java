@@ -19,7 +19,11 @@ public class GameSuper extends Game {
     }
 
     public static Palette[] palettes = {
-            new Palette("E6E6E6", "5C7AEA", "3D56B2", "14279B")
+            new Palette("E6E6E6", "5C7AEA", "3D56B2", "14279B"),
+            new Palette("FFCDDD", "EA99D5", "B762C1", "8946A6"),
+            new Palette("E9A6A6", "864879", "3F3351", "1F1D36"),
+            new Palette("181D31", "678983", "E6DDC4", "F0E9D2"),
+            new Palette("C996CC", "916BBF", "3D2C8D", "1C0C5B"),
     };
 
     public static FreeTypeFontGenerator mainFontGenerator;

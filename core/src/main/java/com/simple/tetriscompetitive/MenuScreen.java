@@ -24,7 +24,7 @@ public class MenuScreen implements Screen {
     static GameObject2D.MySpriteBatch spriteBatch = new GameObject2D.MySpriteBatch();
     static Label hostButtonLabel, connectButtonLabel;
     static TextField playerNameTextField, roomNameTextField, remoteHostNameTextField;
-    static GameObject2D hostButton, connectButton;
+    static GameObject2D hostButton, connectButton, settingsButton;
     static ArrayList<GameObject2D> objects = new ArrayList<>();
     static int screenWidth, screenHeight;
 
@@ -66,7 +66,13 @@ public class MenuScreen implements Screen {
         h = (int)(150 * ratioHeight);
         pixmap = Drawing.createRoundedRectangle(w, h, cornerRadius, GameSuper.palette.onSecondary);
         objects.add(new GameObject2D(pixmap, 100, screenHeight - h - 100 - userPic.getHeight() - 20));
+        pixmap = Drawing.createRoundedRectangle(w - h, h, cornerRadius, GameSuper.palette.onSecondary);
+        objects.add(new GameObject2D(pixmap, 100, screenHeight - h - 100 - userPic.getHeight() - 20));
         GameObject2D playerNameBG = objects.get(objects.size() - 1);
+        pixmap = new Pixmap(h, h, Pixmap.Format.RGBA8888);
+        pixmap.drawPixmap(new Pixmap(Gdx.files.internal("brush.png")), 0, 0, 1000, 1000, h / 6, h / 6, h / 3 * 2, h / 3 * 2);
+        objects.add(new GameObject2D(pixmap, playerNameBG.getX() + playerNameBG.getWidth(), playerNameBG.getY()));
+        settingsButton = objects.get(objects.size() - 1);
         pixmap.dispose();
         userPic.dispose();
 
@@ -105,8 +111,8 @@ public class MenuScreen implements Screen {
 
         playerNameTextField = new TextField(DataManagement.data.nickname, textFieldStyle);
         playerNameTextField.setAlignment(Align.center);
-        playerNameTextField.setPosition(playerNameBG.getX(), playerNameBG.getY());
-        playerNameTextField.setSize(playerNameBG.getWidth(), playerNameBG.getHeight());
+        playerNameTextField.setPosition(playerNameBG.getX() + cornerRadius, playerNameBG.getY());
+        playerNameTextField.setSize(playerNameBG.getWidth() - cornerRadius, playerNameBG.getHeight());
         stage.addActor(playerNameTextField);
 
         parameter.size = connectButton.getHeight() / 3 + 1;
@@ -202,6 +208,8 @@ public class MenuScreen implements Screen {
                 if (NetworkingManager.startHost(roomNameTextField.getText()))
                     GameSuper.instance.setScreen(new PlayScreen(true));
             }
+
+            if (settingsButton.contains()) GameSuper.instance.setScreen(new SettingsScreen());
         }
 
         if (playerNameTextField.hasKeyboardFocus()) playerNameTextField.getOnscreenKeyboard().show(true);
