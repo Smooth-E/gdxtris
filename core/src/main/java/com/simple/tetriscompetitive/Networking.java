@@ -23,6 +23,7 @@ public class Networking {
         public int status = STATUS_IDLE;
         public static final int STATUS_PLAYING = 0, STATUS_CD1 = 1, STATUS_CD2 = 2, STATUS_CD3 = 3, STATUS_IDLE = 4;
         public long seed = new Random().nextLong();
+        public boolean gameEnded = false;
 
         public Room(String name){
             this.name = name;
@@ -75,6 +76,17 @@ public class Networking {
             this.roomInfo = roomInfo;
         }
     }
+
+    public static class GameEndRequest {}
+
+    public static  class DisconnectRequest {
+        public int id;
+
+        public DisconnectRequest(){}
+        public DisconnectRequest(int id){this.id = id;}
+    }
+
+    public static class GameEndResponse {}
 
     public static class ClientListener extends Listener {
         @Override
@@ -146,6 +158,15 @@ public class Networking {
                 }
                 UpdatedGameStateResponse response = new UpdatedGameStateResponse(NetworkingManager.roomInfo);
                 connection.sendTCP(response);
+            }
+            else if (object instanceof DisconnectRequest) {
+                DisconnectRequest request = (DisconnectRequest) object;
+                for (int i = 0; i < NetworkingManager.roomInfo.players.size(); i++) {
+                    if (NetworkingManager.roomInfo.players.get(i).id == request.id) {
+                        NetworkingManager.roomInfo.players.remove(i);
+                        break;
+                    }
+                }
             }
         }
     }

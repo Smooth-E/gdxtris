@@ -56,7 +56,7 @@ public class PlayScreen implements Screen {
     ArrayList<Label> playerInfoLabels = new ArrayList<>(10);
     ArrayList<GameObject2D[]> playerInfoCosmeticElements = new ArrayList<GameObject2D[]>(10);
     Label headerLabel;
-    GameObject2D backToPlayButton;
+    GameObject2D backToPlayButton, exitGameButton;
     Stage infoStage = new Stage();
 
     @Override
@@ -258,6 +258,10 @@ public class PlayScreen implements Screen {
         pixmap.drawPixmap(new Pixmap(Gdx.files.internal("left.png")), 0, 0, 1000, 1000, 0, 0, unitHeight, unitHeight);
         backToPlayButton = new GameObject2D(pixmap, margin, infoStateObjects.get(0).getY());
 
+        pixmap = new Pixmap(unitHeight, unitHeight, Pixmap.Format.RGBA8888);
+        pixmap.drawPixmap(new Pixmap(Gdx.files.internal("exit.png")), 0, 0, 1000, 1000, 0, 0, pixmap.getWidth(), pixmap.getHeight());
+        exitGameButton = new GameObject2D(pixmap, screenWidth - margin - pixmap.getWidth(), backToPlayButton.getY());
+
         parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
         parameter.size = (screenWidth - 2 * margin) / (10 + " [000.000.000.000]".length()) * 2;
         parameter.color = GameSuper.palette.secondary;
@@ -268,9 +272,9 @@ public class PlayScreen implements Screen {
 
         String s = "[" + networkAddress + "]";
         headerLabel = new Label(s, labelStyle);
-        headerLabel.setSize(screenWidth - 2 * margin - backToPlayButton.getWidth() - 2 * margin, unitHeight);
-        headerLabel.setPosition(backToPlayButton.getX() + backToPlayButton.getWidth(), backToPlayButton.getY(), Align.bottomLeft);
-        headerLabel.setAlignment(Align.right);
+        headerLabel.setSize(screenWidth - 2 * margin, unitHeight);
+        headerLabel.setPosition(0, backToPlayButton.getY(), Align.bottomLeft);
+        headerLabel.setAlignment(Align.center);
         infoStage.addActor(headerLabel);
 
         parameter.color = GameSuper.palette.onSecondary;
@@ -338,6 +342,8 @@ public class PlayScreen implements Screen {
         Gdx.gl.glClearColor(c.r,c.g,c.b,1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
+        if (!NetworkingManager.client.isConnected()) GameSuper.instance.setScreen(new MenuScreen());
+
         startGameButton.setActive(NetworkingManager.clientSideRoom.status == Networking.Room.STATUS_IDLE && isAdmin);
         startGameLabel.setVisible(startGameButton.isActive());
 
@@ -377,6 +383,15 @@ public class PlayScreen implements Screen {
             }
             else if (state == STATE_INFO) {
                 if (backToPlayButton.contains()) state = STATE_PLAYING;
+                else if (exitGameButton.contains()) {
+                    NetworkingManager.client.sendTCP(new Networking.DisconnectRequest(NetworkingManager.playerInfo.id));
+                    NetworkingManager.client.close();
+                    if (isAdmin) {
+                        NetworkingManager.server.sendToAllTCP(new Networking.GameEndRequest());
+                        NetworkingManager.server.close();
+                    }
+                    GameSuper.instance.setScreen(new MenuScreen());
+                }
             }
         }
         else if (Gdx.input.isTouched()) {
@@ -475,6 +490,7 @@ public class PlayScreen implements Screen {
                 spriteBatch.draw(o[2]);
             }
             spriteBatch.draw(backToPlayButton);
+            spriteBatch.draw(exitGameButton);
             spriteBatch.end();
 
             infoStage.act();
