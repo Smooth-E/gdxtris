@@ -139,6 +139,7 @@ public class Networking {
                 UpdatedGameStateRequest request = (UpdatedGameStateRequest) object;
                 for (int i = 0; i < NetworkingManager.roomInfo.players.size(); i++){
                     if (NetworkingManager.roomInfo.players.get(i).id == request.playerState.id) {
+                        request.playerState.canPlay = request.playerState.canPlay || NetworkingManager.roomInfo.players.get(i).canPlay;
                         NetworkingManager.roomInfo.players.set(i, request.playerState);
                         break;
                     }

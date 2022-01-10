@@ -379,6 +379,22 @@ public class PlayScreen implements Screen {
                 if (backToPlayButton.contains()) state = STATE_PLAYING;
             }
         }
+        else if (Gdx.input.isTouched()) {
+            if (state == STATE_PLAYING) {
+                Tetris.autoShiftDelay += delta;
+                Tetris.autoRepeatDelay += delta;
+                if (Tetris.autoShiftDelay >= 10 / 30f && Tetris.autoRepeatDelay >= 2 / 30f) {
+                    Tetris.autoRepeatDelay = 0;
+                    if (stepLeftButton.contains()) Tetris.moveLeft();
+                    else if (stepRightButton.contains()) Tetris.moveRight();
+                    else if (stepDownButton.contains()) Tetris.moveDown();
+                }
+            }
+        }
+        else {
+            Tetris.autoShiftDelay = 0;
+            Tetris.autoRepeatDelay = 0;
+        }
 
         spriteBatch.begin();
         if (state == STATE_PLAYING) {
@@ -466,7 +482,7 @@ public class PlayScreen implements Screen {
         }
 
         timePassedFromTick += Gdx.graphics.getDeltaTime();
-        if (timePassedFromTick >= .5) {
+        if (timePassedFromTick >= 1) {
             Tetris.tick();
             timePassedFromTick = 0;
         }
