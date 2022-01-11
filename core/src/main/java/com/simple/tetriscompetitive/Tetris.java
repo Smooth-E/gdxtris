@@ -169,6 +169,7 @@ public class Tetris {
             }
     };
     public static float autoShiftDelay = 0, autoRepeatDelay = 0;
+    public static int ticksBeforeLock = 1;
 
     public static void generateField(){
         NetworkingManager.playerInfo.field = new int[fieldHeight][fieldHeight];
@@ -196,7 +197,7 @@ public class Tetris {
 
     public static boolean tick(){
         boolean shouldStop = false;
-        int[][] figure = getFigure();
+        int[][] figure = getFigure().clone();
         for (int y = 0; y < figure.length; y++){
             for (int x = 0; x < figure[0].length; x++){
                 if (figure[y][x] == 1 &&
@@ -208,41 +209,46 @@ public class Tetris {
             }
         }
         if (shouldStop) {
-            for (int fy = 0; fy < figure.length; fy++) {
-                for (int fx = 0; fx < figure[0].length; fx++) {
-                    if (figure[fy][fx] != 0)
-                        NetworkingManager.playerInfo.field[NetworkingManager.playerInfo.figureY + fy][NetworkingManager.playerInfo.figureX + fx] = NetworkingManager.playerInfo.figureID;
+            if (ticksBeforeLock == 0) {
+                for (int fy = 0; fy < figure.length; fy++) {
+                    for (int fx = 0; fx < figure[0].length; fx++) {
+                        if (figure[fy][fx] != 0)
+                            NetworkingManager.playerInfo.field[NetworkingManager.playerInfo.figureY + fy][NetworkingManager.playerInfo.figureX + fx] = NetworkingManager.playerInfo.figureID;
+                    }
                 }
+                NetworkingManager.playerInfo.figureX = fieldWidth / 2;
+                NetworkingManager.playerInfo.figureRotation = 0;
+                NetworkingManager.playerInfo.figureY = 1;
+                NetworkingManager.playerInfo.turn++;
+                NetworkingManager.playerInfo.holdPerformed = false;
+                NetworkingManager.playerInfo.figureID = new Random(NetworkingManager.clientSideRoom.seed + NetworkingManager.playerInfo.turn).nextInt(7);
+                autoRepeatDelay = 0;
+                autoShiftDelay = 0;
+                ticksBeforeLock = 1;
+
+                int linesCleared = 0;
+                for (int y = 0; y < fieldHeight; y++) {
+                    boolean clear = true;
+                    for (int x = 0; x < fieldWidth; x++) {
+                        if (NetworkingManager.playerInfo.field[y][x] == -1) {
+                            clear = false;
+                            break;
+                        }
+                    }
+                    if (clear) {
+                        linesCleared++;
+                        for (int newY = y; newY > 0; newY--) {
+                            NetworkingManager.playerInfo.field[newY] = NetworkingManager.playerInfo.field[newY - 1];
+                        }
+                    }
+                }
+                if (linesCleared > 0) NetworkingManager.playerInfo.score += 100 + 200 * (linesCleared - 1);
+                if (linesCleared == 4) NetworkingManager.playerInfo.score += 1;
             }
-            NetworkingManager.playerInfo.turn++;
-            NetworkingManager.playerInfo.figureID = new Random(NetworkingManager.clientSideRoom.seed + NetworkingManager.playerInfo.turn).nextInt(7);
-            NetworkingManager.playerInfo.figureY = 0;
-            NetworkingManager.playerInfo.figureX = fieldWidth / 2 - figure[0].length / 2;
-            autoRepeatDelay = 0;
-            autoShiftDelay = 0;
+            else ticksBeforeLock --;
         }
         else
             NetworkingManager.playerInfo.figureY += 1;
-
-
-        int linesCleared = 0;
-        for (int y = 0; y < fieldHeight; y++) {
-            boolean clear = true;
-            for (int x = 0; x < fieldWidth; x++) {
-                if (NetworkingManager.playerInfo.field[y][x] == -1) {
-                    clear = false;
-                    break;
-                }
-            }
-            if (clear) {
-                linesCleared++;
-                for (int newY = y; newY > 0; newY--) {
-                    NetworkingManager.playerInfo.field[newY] = NetworkingManager.playerInfo.field[newY - 1];
-                }
-            }
-        }
-        if (linesCleared > 0) NetworkingManager.playerInfo.score += 100 + 200 * (linesCleared - 1);
-        if (linesCleared == 4) NetworkingManager.playerInfo.score += 1;
 
         return !shouldStop;
     }
@@ -286,7 +292,10 @@ public class Tetris {
     }
 
     public static void instantDown(){
-        while (tick()){}
+        while (true){
+            if (!tick()) break;
+        }
+        tick();
     }
 
     public static boolean rotateClockwise(){
@@ -332,6 +341,27 @@ public class Tetris {
                 NetworkingManager.playerInfo.figureRotation = oldRotation;
                 break;
             }
+        }
+    }
+
+    public static void performHold(){
+        if (!NetworkingManager.playerInfo.holdPerformed) {
+            if (NetworkingManager.playerInfo.holdID == -1) {
+                NetworkingManager.playerInfo.holdID = NetworkingManager.playerInfo.figureID;
+                NetworkingManager.playerInfo.figureID = new Random(NetworkingManager.clientSideRoom.seed + NetworkingManager.playerInfo.turn).nextInt(7);
+                NetworkingManager.playerInfo.figureX = fieldWidth / 2;
+                NetworkingManager.playerInfo.turn++;
+            }
+            else {
+                int id = NetworkingManager.playerInfo.figureID;
+                NetworkingManager.playerInfo.figureID = NetworkingManager.playerInfo.holdID;
+                NetworkingManager.playerInfo.holdID = id;
+            }
+            NetworkingManager.playerInfo.figureRotation = 0;
+            NetworkingManager.playerInfo.figureY = 0;
+            autoRepeatDelay = 0;
+            autoShiftDelay = 0;
+            NetworkingManager.playerInfo.holdPerformed = true;
         }
     }
 }

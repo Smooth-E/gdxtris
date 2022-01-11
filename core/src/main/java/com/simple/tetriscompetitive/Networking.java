@@ -13,8 +13,9 @@ public class Networking {
         public String name;
         public int score = 0, stack = 10, id, targetID = -1;
         public int[][] field = new int[22][10];
-        public int figureID = 2, figureRotation, figureX, figureY, holdID, turn;
+        public int figureID = 2, figureRotation, figureX, figureY, holdID = -1, turn;
         public boolean canPlay = false;
+        public boolean holdPerformed = false;
     }
 
     public static class Room {

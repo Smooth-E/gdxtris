@@ -2,6 +2,7 @@ package com.simple.tetriscompetitive;
 
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.GL20;
@@ -18,6 +19,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Random;
 
 public class PlayScreen implements Screen {
 
@@ -49,7 +51,7 @@ public class PlayScreen implements Screen {
     GameObject2D holdBG, nextPieceBG;
     GameObject2D gameStatusOverlay, startGameButton;
     Pixmap playFieldPixmap;
-    Label statsLabel, startGameLabel;
+    Label statsLabel, startGameLabel, scoreLabel;
     Stage playStateStage = new Stage();
 
     ArrayList<GameObject2D> infoStateObjects = new ArrayList<>();
@@ -244,6 +246,20 @@ public class PlayScreen implements Screen {
 
         statsLabel.setText(getNumberWithSuffix(NetworkingManager.clientSideRoom.players.size()));
 
+        parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        parameter.color = GameSuper.palette.primary;
+        parameter.size = (int)(50 * ratioHeight);
+
+        font = GameSuper.mainFontGenerator.generateFont(parameter);
+
+        Label.LabelStyle scoreLabelStyle = new Label.LabelStyle(font, Color.WHITE);
+
+        scoreLabel = new Label("SCORE: ", scoreLabelStyle);
+        scoreLabel.setPosition(0, 454 * ratioHeight, Align.bottomLeft);
+        scoreLabel.setSize(screenWidth, 50 * ratioHeight);
+        scoreLabel.setAlignment(Align.center);
+        playStateStage.addActor(scoreLabel);
+
         Tetris.generateField();
 
         Gdx.input.setInputProcessor(stage);
@@ -344,6 +360,8 @@ public class PlayScreen implements Screen {
 
         if (!NetworkingManager.client.isConnected()) GameSuper.instance.setScreen(new MenuScreen());
 
+        scoreLabel.setText("SCORE: " + NetworkingManager.playerInfo.score + " | TURN: " + NetworkingManager.playerInfo.turn);
+
         startGameButton.setActive(NetworkingManager.clientSideRoom.status == Networking.Room.STATUS_IDLE && isAdmin);
         startGameLabel.setVisible(startGameButton.isActive());
 
@@ -380,6 +398,7 @@ public class PlayScreen implements Screen {
                 else if (rotateClockwiseButton.contains()) Tetris.rotateClockwise();
                 else if (rotateAntiClockwiseButton.contains()) Tetris.rotateAnticlockwise();
                 else if (rotate180Button.contains()) Tetris.rotate180();
+                else if (exchangeButton.contains()) Tetris.performHold();
             }
             else if (state == STATE_INFO) {
                 if (backToPlayButton.contains()) state = STATE_PLAYING;
@@ -409,6 +428,14 @@ public class PlayScreen implements Screen {
         else {
             Tetris.autoShiftDelay = 0;
             Tetris.autoRepeatDelay = 0;
+        }
+
+        //Logic for PC key presses
+        if (state == STATE_PLAYING) {
+            if (Gdx.input.isKeyJustPressed(Input.Keys.RIGHT)) Tetris.moveRight();
+            else if (Gdx.input.isKeyJustPressed(Input.Keys.LEFT)) Tetris.moveLeft();
+            else if (Gdx.input.isKeyJustPressed(Input.Keys.SPACE)) Tetris.instantDown();
+            else if (Gdx.input.isKeyJustPressed(Input.Keys.UP)) Tetris.rotateAnticlockwise();
         }
 
         spriteBatch.begin();
@@ -490,6 +517,46 @@ public class PlayScreen implements Screen {
 
             spriteBatch.draw(gameStatusOverlay);
 
+            GameObject2D holdObject = null;
+            if (NetworkingManager.playerInfo.holdID != -1) {
+                int[][] hold = Tetris.figures[NetworkingManager.playerInfo.holdID][0].clone();
+                pixmap = new Pixmap(holdBG.getWidth(), holdBG.getHeight(), Pixmap.Format.RGBA8888);
+                cellSize = Math.min((holdBG.getWidth() / 2 - 2 * margin) / hold[0].length, (holdBG.getHeight() - 2 * margin) / hold.length);
+                if (!NetworkingManager.playerInfo.holdPerformed) pixmap.setColor(Tetris.figureColors.clone()[NetworkingManager.playerInfo.holdID]);
+                else pixmap.setColor(Color.DARK_GRAY);
+                for (int fx = 0; fx < hold[0].length; fx++) {
+                    for (int fy = 0 ; fy < hold.length; fy++) {
+                        if (hold[fy][fx] == 1) pixmap.fillRectangle(holdBG.getWidth() / 2 + margin + fx * cellSize, margin + fy * cellSize, cellSize, cellSize);
+                    }
+                }
+                holdObject = new GameObject2D(pixmap, holdBG.getX(), holdBG.getY());
+                spriteBatch.draw(holdObject);
+            }
+
+            spriteBatch.end();
+
+            int slotWidth = Math.min((nextPieceBG.getHeight() - margin) / 4, nextPieceBG.getWidth() / 2);
+            // Drawing next pieces
+            for (int i = 1; i <= 4; i++){
+                pixmap = new Pixmap(slotWidth, slotWidth, Pixmap.Format.RGBA8888);
+                int figureID = new Random(NetworkingManager.clientSideRoom.seed + NetworkingManager.playerInfo.turn + i).nextInt(7);
+                int[][] nextFigure = Tetris.figures[figureID][0].clone();
+                cellSize = Math.min((slotWidth - margin) / nextFigure.length, (slotWidth - 2 * margin) / nextFigure[0].length);
+                pixmap.setColor(Tetris.figureColors[figureID]);
+                for (int fy = 0; fy < nextFigure.length; fy++) {
+                    for (int fx = 0; fx < nextFigure[0].length; fx++) {
+                        if (nextFigure[fy][fx] == 1) pixmap.fillRectangle(margin + fx * cellSize, margin + fy * cellSize, cellSize, cellSize);
+                    }
+                }
+                GameObject2D o = new GameObject2D(pixmap, nextPieceBG.getX() + nextPieceBG.getWidth() / 2f, nextPieceBG.getY() + nextPieceBG.getHeight() - i * slotWidth);
+                spriteBatch.begin();
+                spriteBatch.draw(o);
+                spriteBatch.end();
+                o.dispose();
+            }
+
+            spriteBatch.begin();
+
             spriteBatch.draw(startGameButton);
 
             spriteBatch.end();
@@ -497,6 +564,7 @@ public class PlayScreen implements Screen {
             field.dispose();
             stack.dispose();
             newField.dispose();
+            if (holdObject != null) holdObject.dispose();
 
             playStateStage.act();
             playStateStage.draw();
