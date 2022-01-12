@@ -232,12 +232,12 @@ public class Tetris {
                                 NetworkingManager.playerInfo.field[NetworkingManager.playerInfo.figureY + fy][NetworkingManager.playerInfo.figureX + fx] = NetworkingManager.playerInfo.figureID;
                         }
                     }
-                    NetworkingManager.playerInfo.figureX = fieldWidth / 2;
+                    NetworkingManager.playerInfo.figureID = new Random(NetworkingManager.clientSideRoom.seed + NetworkingManager.playerInfo.turn).nextInt(7);
+                    NetworkingManager.playerInfo.figureX = fieldWidth / 2 - getFigure()[0].length / 2;
                     NetworkingManager.playerInfo.figureRotation = 0;
                     NetworkingManager.playerInfo.figureY = 0;
                     NetworkingManager.playerInfo.turn++;
                     NetworkingManager.playerInfo.holdPerformed = false;
-                    NetworkingManager.playerInfo.figureID = new Random(NetworkingManager.clientSideRoom.seed + NetworkingManager.playerInfo.turn).nextInt(7);
                     autoRepeatDelay = 0;
                     autoShiftDelay = 0;
                     ticksBeforeLock = 1;
@@ -324,6 +324,8 @@ public class Tetris {
         if (newRotation >= 4) newRotation = 0;
         int[][] figure = getFigure(), newFigure = figures[player.figureID][newRotation];
 
+        player.figureX = player.figureX + figure[0].length - newFigure[0].length;
+
         if (player.figureX + newFigure[0].length >= fieldWidth)
             player.figureX = fieldWidth - newFigure[0].length;
         if (player.figureX < 0) player.figureX = 0;
@@ -369,7 +371,7 @@ public class Tetris {
             if (NetworkingManager.playerInfo.holdID == -1) {
                 NetworkingManager.playerInfo.holdID = NetworkingManager.playerInfo.figureID;
                 NetworkingManager.playerInfo.figureID = new Random(NetworkingManager.clientSideRoom.seed + NetworkingManager.playerInfo.turn).nextInt(7);
-                NetworkingManager.playerInfo.figureX = fieldWidth / 2;
+                NetworkingManager.playerInfo.figureX = fieldWidth / 2 - getFigure()[0].length / 2;
                 NetworkingManager.playerInfo.turn++;
             }
             else {
