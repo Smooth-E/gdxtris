@@ -238,7 +238,7 @@ public class Tetris {
                     if (clear) {
                         linesCleared++;
                         for (int newY = y; newY > 0; newY--) {
-                            NetworkingManager.playerInfo.field[newY] = NetworkingManager.playerInfo.field[newY - 1];
+                            NetworkingManager.playerInfo.field[newY] = NetworkingManager.playerInfo.field[newY - 1].clone();
                         }
                     }
                 }

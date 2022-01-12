@@ -598,7 +598,7 @@ public class PlayScreen implements Screen {
         }
 
         timePassedFromTick += Gdx.graphics.getDeltaTime();
-        if (timePassedFromTick >= .1f) {
+        if (timePassedFromTick >= 1) {
             Tetris.tick();
             NetworkingManager.client.sendTCP(new Networking.UpdatedGameStateRequest());
             timePassedFromTick = 0;
