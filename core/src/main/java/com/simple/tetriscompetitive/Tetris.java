@@ -18,7 +18,8 @@ public class Tetris {
             Color.ORANGE,
             Color.RED,
             Color.GREEN,
-            Color.PURPLE
+            Color.PURPLE,
+            Color.GRAY
     };
 
     static int[][][][] figures = new int[][][][] {
@@ -196,61 +197,76 @@ public class Tetris {
     }
 
     public static boolean tick(){
-        boolean shouldStop = false;
-        int[][] figure = getFigure();
-        for (int y = 0; y < figure.length; y++){
-            for (int x = 0; x < figure[0].length; x++){
-                if (figure[y][x] == 1 &&
+        if (NetworkingManager.playerInfo.canPlay) {
+            for (int x = 0; x < fieldWidth; x++) {
+                if (NetworkingManager.playerInfo.field[0][x] != -1) {
+                    NetworkingManager.playerInfo.canPlay = false;
+                    for (int fy = 0; fy < fieldHeight; fy++) {
+                        for (int fx = 0; fx < fieldWidth; fx++) {
+                            if (NetworkingManager.playerInfo.field[fy][fx] != -1) {
+                                NetworkingManager.playerInfo.field[fy][fx] = 7;
+                            }
+                        }
+                    }
+                }
+            }
+
+            boolean shouldStop = false;
+            int[][] figure = getFigure();
+            for (int y = 0; y < figure.length; y++) {
+                for (int x = 0; x < figure[0].length; x++) {
+                    if (figure[y][x] == 1 &&
                             (NetworkingManager.playerInfo.figureY + y >= fieldHeight - 1 ||
-                            NetworkingManager.playerInfo.field[NetworkingManager.playerInfo.figureY + y + 1][NetworkingManager.playerInfo.figureX + x] > -1)){
-                    shouldStop = true;
-                    break;
+                                    NetworkingManager.playerInfo.field[NetworkingManager.playerInfo.figureY + y + 1][NetworkingManager.playerInfo.figureX + x] > -1)) {
+                        shouldStop = true;
+                        break;
+                    }
                 }
             }
-        }
-        if (shouldStop) {
-            if (ticksBeforeLock == 0) {
-                for (int fy = 0; fy < figure.length; fy++) {
-                    for (int fx = 0; fx < figure[0].length; fx++) {
-                        if (figure[fy][fx] != 0)
-                            NetworkingManager.playerInfo.field[NetworkingManager.playerInfo.figureY + fy][NetworkingManager.playerInfo.figureX + fx] = NetworkingManager.playerInfo.figureID;
-                    }
-                }
-                NetworkingManager.playerInfo.figureX = fieldWidth / 2;
-                NetworkingManager.playerInfo.figureRotation = 0;
-                NetworkingManager.playerInfo.figureY = 1;
-                NetworkingManager.playerInfo.turn++;
-                NetworkingManager.playerInfo.holdPerformed = false;
-                NetworkingManager.playerInfo.figureID = new Random(NetworkingManager.clientSideRoom.seed + NetworkingManager.playerInfo.turn).nextInt(7);
-                autoRepeatDelay = 0;
-                autoShiftDelay = 0;
-                ticksBeforeLock = 1;
-
-                int linesCleared = 0;
-                for (int y = 0; y < fieldHeight; y++) {
-                    boolean clear = true;
-                    for (int x = 0; x < fieldWidth; x++) {
-                        if (NetworkingManager.playerInfo.field[y][x] == -1) {
-                            clear = false;
-                            break;
+            if (shouldStop) {
+                if (ticksBeforeLock == 0) {
+                    for (int fy = 0; fy < figure.length; fy++) {
+                        for (int fx = 0; fx < figure[0].length; fx++) {
+                            if (figure[fy][fx] != 0)
+                                NetworkingManager.playerInfo.field[NetworkingManager.playerInfo.figureY + fy][NetworkingManager.playerInfo.figureX + fx] = NetworkingManager.playerInfo.figureID;
                         }
                     }
-                    if (clear) {
-                        linesCleared++;
-                        for (int newY = y; newY > 0; newY--) {
-                            NetworkingManager.playerInfo.field[newY] = NetworkingManager.playerInfo.field[newY - 1].clone();
+                    NetworkingManager.playerInfo.figureX = fieldWidth / 2;
+                    NetworkingManager.playerInfo.figureRotation = 0;
+                    NetworkingManager.playerInfo.figureY = 0;
+                    NetworkingManager.playerInfo.turn++;
+                    NetworkingManager.playerInfo.holdPerformed = false;
+                    NetworkingManager.playerInfo.figureID = new Random(NetworkingManager.clientSideRoom.seed + NetworkingManager.playerInfo.turn).nextInt(7);
+                    autoRepeatDelay = 0;
+                    autoShiftDelay = 0;
+                    ticksBeforeLock = 1;
+
+                    int linesCleared = 0;
+                    for (int y = 0; y < fieldHeight; y++) {
+                        boolean clear = true;
+                        for (int x = 0; x < fieldWidth; x++) {
+                            if (NetworkingManager.playerInfo.field[y][x] == -1) {
+                                clear = false;
+                                break;
+                            }
+                        }
+                        if (clear) {
+                            linesCleared++;
+                            for (int newY = y; newY > 0; newY--) {
+                                NetworkingManager.playerInfo.field[newY] = NetworkingManager.playerInfo.field[newY - 1].clone();
+                            }
                         }
                     }
-                }
-                if (linesCleared > 0) NetworkingManager.playerInfo.score += 100 + 200 * (linesCleared - 1);
-                if (linesCleared == 4) NetworkingManager.playerInfo.score += 1;
-            }
-            else ticksBeforeLock --;
-        }
-        else
-            NetworkingManager.playerInfo.figureY += 1;
+                    if (linesCleared > 0)
+                        NetworkingManager.playerInfo.score += 100 + 200 * (linesCleared - 1);
+                    if (linesCleared == 4) NetworkingManager.playerInfo.score += 1;
+                } else ticksBeforeLock--;
+            } else
+                NetworkingManager.playerInfo.figureY += 1;
 
-        return !shouldStop;
+            return !shouldStop;
+        }
+        else return false;
     }
 
     public static void moveLeft(){

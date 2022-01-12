@@ -141,6 +141,7 @@ public class Networking {
                 connection.sendTCP(response);
             }
             else if (object instanceof StartGameRequest) {
+                Gdx.app.log("", "Received to start a game!");
                 for (int i = 0; i < NetworkingManager.roomInfo.players.size(); i++){
                     PlayerContainer p = NetworkingManager.roomInfo.players.get(i);
                     p.canPlay = true;
@@ -152,11 +153,20 @@ public class Networking {
                 UpdatedGameStateRequest request = (UpdatedGameStateRequest) object;
                 for (int i = 0; i < NetworkingManager.roomInfo.players.size(); i++){
                     if (NetworkingManager.roomInfo.players.get(i).id == request.playerState.id) {
-                        request.playerState.canPlay = request.playerState.canPlay || NetworkingManager.roomInfo.players.get(i).canPlay;
                         NetworkingManager.roomInfo.players.set(i, request.playerState);
                         break;
                     }
                 }
+
+                boolean playersAlive = false;
+                for (PlayerContainer player : NetworkingManager.roomInfo.players) {
+                    if (player.canPlay) {
+                        playersAlive = true;
+                        break;
+                    }
+                }
+                if (!playersAlive && NetworkingManager.roomInfo.status == Room.STATUS_PLAYING) NetworkingManager.roomInfo.status = Room.STATUS_IDLE;
+
                 UpdatedGameStateResponse response = new UpdatedGameStateResponse(NetworkingManager.roomInfo);
                 connection.sendTCP(response);
             }

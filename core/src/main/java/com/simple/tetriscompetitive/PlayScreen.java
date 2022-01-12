@@ -369,17 +369,32 @@ public class PlayScreen implements Screen {
             case Networking.Room.STATUS_CD1:
             case Networking.Room.STATUS_CD2:
             case Networking.Room.STATUS_CD3:
+                NetworkingManager.playerInfo.canPlay = true;
                 statsLabel.setText(NetworkingManager.clientSideRoom.status);
                 break;
             case Networking.Room.STATUS_PLAYING:
                 startGameLabel.setVisible(false);
                 startGameButton.setActive(false);
                 gameStatusOverlay.setActive(!NetworkingManager.playerInfo.canPlay);
+                if (statsLabel.isVisible() == NetworkingManager.playerInfo.canPlay && !NetworkingManager.playerInfo.canPlay) {
+                    int playersAlive = 0;
+                    for (Networking.PlayerContainer player : NetworkingManager.clientSideRoom.players) {
+                        if (player.id != NetworkingManager.playerInfo.id && player.canPlay) playersAlive++;
+                    }
+                    statsLabel.setText(getNumberWithSuffix(playersAlive + 1));
+                }
                 statsLabel.setVisible(!NetworkingManager.playerInfo.canPlay);
+                break;
+            case Networking.Room.STATUS_IDLE:
+                startGameLabel.setVisible(isAdmin);
+                startGameButton.setActive(isAdmin);
+                gameStatusOverlay.setActive(true);
+                statsLabel.setVisible(true);
+                break;
         }
 
         if (NetworkingManager.clientSideRoom.status == Networking.Room.STATUS_PLAYING &&
-                previousRoomStatus != Networking.Room.STATUS_PLAYING) {
+                previousRoomStatus != Networking.Room.STATUS_PLAYING && NetworkingManager.playerInfo.canPlay) {
             Tetris.start();
             Gdx.app.log("Some tag", "some log!");
         }
@@ -468,33 +483,35 @@ public class PlayScreen implements Screen {
                 }
             }
 
-            boolean shouldStop = false;
-            int yd = 0;
-            while (true) {
-                for (int y = 0; y < figure.length; y++) {
-                    for (int x = 0; x < figure[0].length; x++) {
-                        if (figure[y][x] == 1 &&
-                                (NetworkingManager.playerInfo.figureY + y + yd >= Tetris.fieldHeight - 1 ||
-                                        NetworkingManager.playerInfo.field[NetworkingManager.playerInfo.figureY + y + yd + 1][NetworkingManager.playerInfo.figureX + x] > -1)) {
-                            shouldStop = true;
-                            break;
+            if (NetworkingManager.playerInfo.canPlay) {
+                boolean shouldStop = false;
+                int yd = 0;
+                while (true) {
+                    for (int y = 0; y < figure.length; y++) {
+                        for (int x = 0; x < figure[0].length; x++) {
+                            if (figure[y][x] == 1 &&
+                                    (NetworkingManager.playerInfo.figureY + y + yd >= Tetris.fieldHeight - 1 ||
+                                            NetworkingManager.playerInfo.field[NetworkingManager.playerInfo.figureY + y + yd + 1][NetworkingManager.playerInfo.figureX + x] > -1)) {
+                                shouldStop = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (shouldStop) break;
+                    yd++;
+                }
+                Color figureColor = new Color(Tetris.figureColors[NetworkingManager.playerInfo.figureID]);
+                figureColor.a = 0.5f;
+                newField.setColor(figureColor);
+                for (int x = 0; x < figure[0].length; x++) {
+                    for (int y = 0; y < figure.length; y++) {
+                        if (figure[y][x] == 1) {
+                            newField.fillRectangle((NetworkingManager.playerInfo.figureX + x) * cellSize,
+                                    (NetworkingManager.playerInfo.figureY + y + yd) * cellSize, cellSize, cellSize);
                         }
                     }
                 }
-                if (shouldStop) break;
-                yd++;
             }
-            Color figureColor = new Color(Tetris.figureColors[NetworkingManager.playerInfo.figureID]);
-            figureColor.a = 0.5f;
-            newField.setColor(figureColor);
-            /*for (int x = 0; x < figure[0].length; x++){
-                for (int y = 0; y < figure.length; y++){
-                    if (figure[y][x] == 1) {
-                        newField.fillRectangle((NetworkingManager.playerInfo.figureX + x) * cellSize,
-                                (NetworkingManager.playerInfo.figureY + y + yd) * cellSize, cellSize, cellSize);
-                    }
-                }
-            }*/
 
 
             field = new GameObject2D(newField, 0, 0);
@@ -597,12 +614,14 @@ public class PlayScreen implements Screen {
             infoStage.draw();
         }
 
-        timePassedFromTick += Gdx.graphics.getDeltaTime();
-        if (timePassedFromTick >= 1) {
-            Tetris.tick();
-            NetworkingManager.client.sendTCP(new Networking.UpdatedGameStateRequest());
-            timePassedFromTick = 0;
+        if (NetworkingManager.playerInfo.canPlay) {
+            timePassedFromTick += Gdx.graphics.getDeltaTime();
+            if (timePassedFromTick >= 1) {
+                Tetris.tick();
+                timePassedFromTick = 0;
+            }
         }
+        NetworkingManager.client.sendTCP(new Networking.UpdatedGameStateRequest());
     }
 
     @Override
