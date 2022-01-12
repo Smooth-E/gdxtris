@@ -624,7 +624,7 @@ public class PlayScreen implements Screen {
             }
 
             Tetris.noClearsTime += delta;
-            if (Tetris.noClearsTime >= 2) {
+            if (Tetris.noClearsTime >= 5) {
                 NetworkingManager.client.sendTCP(new Networking.ReleaseStackRequest(NetworkingManager.playerInfo.id));
                 Tetris.noClearsTime = 0;
             }
@@ -646,6 +646,7 @@ public class PlayScreen implements Screen {
             for (int y = Tetris.fieldHeight - obtainedStack; y < Tetris.fieldHeight; y++) {
                 for (int x = 0; x < Tetris.fieldWidth; x++) {
                     if (x != emptyColumn) NetworkingManager.playerInfo.field[y][x] = 7;
+                    else NetworkingManager.playerInfo.field[y][x] = -1;
                 }
             }
             NetworkingManager.playerInfo.figureY = 0;

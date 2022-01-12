@@ -16,7 +16,7 @@ public class Networking {
         public int figureID = 2, figureRotation, figureX, figureY, holdID = -1, turn;
         public boolean canPlay = false;
         public boolean holdPerformed = false;
-        public int performStackRelease = 1;
+        public int performStackRelease = 0;
 
         public String toString(){
             return "Player: {name: " + name + ", id: " + id + ", stack: " + stackToAdd + "}";
@@ -132,7 +132,7 @@ public class Networking {
                         NetworkingManager.playerInfo.canPlay = playerOnServer.canPlay;
                         NetworkingManager.playerInfo.stackToAdd = playerOnServer.stackToAdd;
                         NetworkingManager.playerInfo.targetID = playerOnServer.targetID;
-                        NetworkingManager.playerInfo.performStackRelease = playerOnServer.performStackRelease;
+                        if (playerOnServer.performStackRelease > 0) NetworkingManager.playerInfo.performStackRelease = playerOnServer.performStackRelease;
                         break;
                     }
                 }
@@ -261,7 +261,7 @@ public class Networking {
                         for (int index = 0; index < NetworkingManager.roomInfo.players.size(); index++) {
                             if (NetworkingManager.roomInfo.players.get(index).id == target) {
                                 PlayerContainer targetPlayer = NetworkingManager.roomInfo.players.get(index);
-                                targetPlayer.performStackRelease = obtainedStack + 100;
+                                targetPlayer.performStackRelease = obtainedStack;
                                 NetworkingManager.roomInfo.players.set(index, targetPlayer);
                                 break;
                             }
@@ -269,6 +269,7 @@ public class Networking {
                         break;
                     }
                 }
+                NetworkingManager.server.sendToAllTCP(new UpdatedGameStateResponse(NetworkingManager.roomInfo));
             }
             else if (object instanceof DisconnectRequest) {
                 DisconnectRequest request = (DisconnectRequest) object;
