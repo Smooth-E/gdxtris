@@ -31,6 +31,7 @@ public class NetworkingManager {
         kryo.register(Networking.StartGameRequest.class);
         kryo.register(Networking.GameEndRequest.class);
         kryo.register(Networking.DisconnectRequest.class);
+        kryo.register(Networking.LineToStackRequest.class);
     }
 
     public static boolean startServer() {

@@ -16,6 +16,10 @@ public class Networking {
         public int figureID = 2, figureRotation, figureX, figureY, holdID = -1, turn;
         public boolean canPlay = false;
         public boolean holdPerformed = false;
+
+        public String toString(){
+            return "Player: {name: " + name + ", id: " + id + ", stack: " + stackToAdd + "}";
+        }
     }
 
     public static class Room {
@@ -87,7 +91,16 @@ public class Networking {
         public DisconnectRequest(int id){this.id = id;}
     }
 
-    public static class GameEndResponse {}
+    public static class LineToStackRequest {
+        int id;
+        int linesCleared;
+
+        public LineToStackRequest(){}
+        public LineToStackRequest(int id, int linesCleared) {
+            this.id = id;
+            this.linesCleared = linesCleared;
+        }
+    }
 
     public static class ClientListener extends Listener {
         @Override
@@ -108,6 +121,7 @@ public class Networking {
                         PlayerContainer playerOnServer = NetworkingManager.clientSideRoom.players.get(i);
                         NetworkingManager.playerInfo.canPlay = playerOnServer.canPlay;
                         NetworkingManager.playerInfo.stackToAdd = playerOnServer.stackToAdd;
+                        NetworkingManager.playerInfo.targetID = playerOnServer.targetID;
                     }
                 }
             }
@@ -123,7 +137,7 @@ public class Networking {
                 player.name = request.playerName;
                 int id;
                 while (true) {
-                    id = new Random().nextInt();
+                    id = new Random().nextInt(10);
                     boolean collide = false;
                     for (PlayerContainer p : NetworkingManager.roomInfo.players){
                         if (p.id == id) {
@@ -153,34 +167,30 @@ public class Networking {
                 UpdatedGameStateRequest request = (UpdatedGameStateRequest) object;
                 for (int i = 0; i < NetworkingManager.roomInfo.players.size(); i++){
                     if (NetworkingManager.roomInfo.players.get(i).id == request.playerState.id) {
-                        int target = request.playerState.targetID;
-                        boolean victimCanPlay = false;
-                        if (target != -1) {
-                            for (int index = 0; index < NetworkingManager.roomInfo.players.size(); index++) {
-                                if (NetworkingManager.roomInfo.players.get(index).id == target) {
-                                    victimCanPlay = NetworkingManager.roomInfo.players.get(index).canPlay;
-                                }
+
+                        // Setting a target id
+                        // Check if new target id is needed
+                        int playerID = 0;
+                        for (int index = 0; index < NetworkingManager.roomInfo.players.size(); index++) {
+                            if (NetworkingManager.roomInfo.players.get(i).id == request.playerState.targetID) {
+                                playerID = index;
+                                break;
                             }
                         }
-                        if (target == -1 || !victimCanPlay) {
-                            int newTargetID = -1;
-                            for (PlayerContainer player : NetworkingManager.roomInfo.players) {
-                                if (player.canPlay) {
-                                    boolean hasOpponent = false;
-                                    for (PlayerContainer player1 : NetworkingManager.roomInfo.players) {
-                                        if (player1.id != request.playerState.id && player1.canPlay && player1.targetID == player.id) {
-                                            hasOpponent = true;
-                                            break;
-                                        }
-                                    }
-                                    if (!hasOpponent) {
-                                        newTargetID = player.id;
+                        if (request.playerState.targetID == -1 || !NetworkingManager.roomInfo.players.get(playerID).canPlay) {
+                            // You have players to choose from?
+                            if (NetworkingManager.roomInfo.players.size() >= 2) {
+                                while (true) {
+                                    int newTarget = new Random().nextInt(NetworkingManager.roomInfo.players.size());
+                                    if (NetworkingManager.roomInfo.players.get(newTarget).id != request.playerState.id) {
+                                        request.playerState.targetID = NetworkingManager.roomInfo.players.get(newTarget).id;
                                         break;
                                     }
                                 }
                             }
-                            request.playerState.targetID = newTargetID;
                         }
+
+                        request.playerState.stackToAdd = NetworkingManager.roomInfo.players.get(i).stackToAdd;
                         NetworkingManager.roomInfo.players.set(i, request.playerState);
                         break;
                     }
@@ -197,6 +207,33 @@ public class Networking {
 
                 UpdatedGameStateResponse response = new UpdatedGameStateResponse(NetworkingManager.roomInfo);
                 connection.sendTCP(response);
+            }
+            else if (object instanceof LineToStackRequest) {
+                LineToStackRequest request = (LineToStackRequest) object;
+                int playerIndex = -1, attackerIndex = -1;
+                for (int i = 0; i < NetworkingManager.roomInfo.players.size(); i++){
+                    if (NetworkingManager.roomInfo.players.get(i).id == request.id) playerIndex = i;
+                    else if (NetworkingManager.roomInfo.players.get(i).targetID == request.id) attackerIndex = i;
+                    else if (playerIndex != -1 && attackerIndex != -1) break;
+                }
+                int addition = request.linesCleared;
+                if (addition >= 4) addition = addition * 2;
+                if (NetworkingManager.roomInfo.players.get(attackerIndex).stackToAdd > 0) {
+                    PlayerContainer attacker = NetworkingManager.roomInfo.players.get(attackerIndex);
+                    if (addition >= attacker.stackToAdd) {
+                        addition -= attacker.stackToAdd;
+                        attacker.stackToAdd = 0;
+                    }
+                    else {
+                        attacker.stackToAdd -= addition;
+                        addition = 0;
+                    }
+                    NetworkingManager.roomInfo.players.set(attackerIndex, attacker);
+                }
+                PlayerContainer player = NetworkingManager.roomInfo.players.get(playerIndex);
+                player.stackToAdd = player.stackToAdd + addition;
+                NetworkingManager.roomInfo.players.set(playerIndex, player);
+                Gdx.app.log("LOG", "attacker: " + attackerIndex + ", player: " + playerIndex + ", addition: " + addition + "\n" + NetworkingManager.roomInfo.players.get(playerIndex));
             }
             else if (object instanceof DisconnectRequest) {
                 DisconnectRequest request = (DisconnectRequest) object;

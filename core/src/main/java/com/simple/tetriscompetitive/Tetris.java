@@ -258,13 +258,11 @@ public class Tetris {
                         }
                     }
                     if (linesCleared > 0) {
+                        NetworkingManager.client.sendTCP(new Networking.LineToStackRequest(NetworkingManager.playerInfo.id, linesCleared));
                         NetworkingManager.playerInfo.score += 100 + 200 * (linesCleared - 1);
-                        NetworkingManager.playerInfo.stackToAdd += linesCleared;
                     }
-                    if (linesCleared == 4) {
-                        NetworkingManager.playerInfo.score += 1;
-                        NetworkingManager.playerInfo.stackToAdd += linesCleared;
-                    }
+                    if (linesCleared == 4) NetworkingManager.playerInfo.score += 1;
+
                 } else ticksBeforeLock--;
             } else
                 NetworkingManager.playerInfo.figureY += 1;

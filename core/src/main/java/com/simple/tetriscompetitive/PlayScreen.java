@@ -358,7 +358,7 @@ public class PlayScreen implements Screen {
 
         if (!NetworkingManager.client.isConnected()) GameSuper.instance.setScreen(new MenuScreen());
 
-        scoreLabel.setText("SCORE: " + NetworkingManager.playerInfo.score + " | TURN: " + NetworkingManager.playerInfo.turn);
+        scoreLabel.setText("SCORE: " + NetworkingManager.playerInfo.score + " | TARGET: " + NetworkingManager.playerInfo.targetID + " | STACK: " + NetworkingManager.playerInfo.stackToAdd);
 
         startGameButton.setActive(NetworkingManager.clientSideRoom.status == Networking.Room.STATUS_IDLE && isAdmin);
         startGameLabel.setVisible(startGameButton.isActive());
@@ -526,7 +526,8 @@ public class PlayScreen implements Screen {
             int s = 0;
             if (NetworkingManager.playerInfo.targetID != -1) {
                 for (int i = 0; i < NetworkingManager.clientSideRoom.players.size(); i++) {
-                    s = NetworkingManager.clientSideRoom.players.get(i).stackToAdd;
+                    if (NetworkingManager.clientSideRoom.players.get(i).targetID == NetworkingManager.playerInfo.id)
+                        s = NetworkingManager.clientSideRoom.players.get(i).stackToAdd;
                 }
             }
             pixmap.fillRectangle(0, pixmap.getHeight() - pixmap.getHeight() / 20 * s, pixmap.getWidth(), pixmap.getHeight() / 20 * s);
