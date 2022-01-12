@@ -11,7 +11,7 @@ public class Networking {
 
     public static class PlayerContainer {
         public String name;
-        public int score = 0, stack = 10, id, targetID = -1;
+        public int score = 0, stackToAdd = 0, id, targetID = -1;
         public int[][] field = new int[22][10];
         public int figureID = 2, figureRotation, figureX, figureY, holdID = -1, turn;
         public boolean canPlay = false;
@@ -107,7 +107,7 @@ public class Networking {
                     if (NetworkingManager.clientSideRoom.players.get(i).id == NetworkingManager.playerInfo.id) {
                         PlayerContainer playerOnServer = NetworkingManager.clientSideRoom.players.get(i);
                         NetworkingManager.playerInfo.canPlay = playerOnServer.canPlay;
-                        NetworkingManager.playerInfo.stack = playerOnServer.stack;
+                        NetworkingManager.playerInfo.stackToAdd = playerOnServer.stackToAdd;
                     }
                 }
             }
@@ -153,6 +153,34 @@ public class Networking {
                 UpdatedGameStateRequest request = (UpdatedGameStateRequest) object;
                 for (int i = 0; i < NetworkingManager.roomInfo.players.size(); i++){
                     if (NetworkingManager.roomInfo.players.get(i).id == request.playerState.id) {
+                        int target = request.playerState.targetID;
+                        boolean victimCanPlay = false;
+                        if (target != -1) {
+                            for (int index = 0; index < NetworkingManager.roomInfo.players.size(); index++) {
+                                if (NetworkingManager.roomInfo.players.get(index).id == target) {
+                                    victimCanPlay = NetworkingManager.roomInfo.players.get(index).canPlay;
+                                }
+                            }
+                        }
+                        if (target == -1 || !victimCanPlay) {
+                            int newTargetID = -1;
+                            for (PlayerContainer player : NetworkingManager.roomInfo.players) {
+                                if (player.canPlay) {
+                                    boolean hasOpponent = false;
+                                    for (PlayerContainer player1 : NetworkingManager.roomInfo.players) {
+                                        if (player1.id != request.playerState.id && player1.canPlay && player1.targetID == player.id) {
+                                            hasOpponent = true;
+                                            break;
+                                        }
+                                    }
+                                    if (!hasOpponent) {
+                                        newTargetID = player.id;
+                                        break;
+                                    }
+                                }
+                            }
+                            request.playerState.targetID = newTargetID;
+                        }
                         NetworkingManager.roomInfo.players.set(i, request.playerState);
                         break;
                     }

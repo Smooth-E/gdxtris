@@ -1,6 +1,5 @@
 package com.simple.tetriscompetitive;
 
-import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
@@ -13,11 +12,8 @@ import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.utils.Align;
 
-import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -42,6 +38,8 @@ public class PlayScreen implements Screen {
     float ratioWidth, ratioHeight;
 
     String networkAddress = "NO ADDRESS";
+
+    float timeWithStack = 0;
 
     ArrayList<GameObject2D> playSateObjects = new ArrayList<>();
     GameObject2D playStateInfoButton, playSatePlayersButton, playStateOverviewButton;
@@ -526,7 +524,11 @@ public class PlayScreen implements Screen {
             pixmap.setColor(GameSuper.palette.onPrimary);
             pixmap.drawRectangle(0, 0, pixmap.getWidth(), pixmap.getHeight());
             int s = 0;
-            if (NetworkingManager.playerInfo != null) s = NetworkingManager.playerInfo.stack;
+            if (NetworkingManager.playerInfo.targetID != -1) {
+                for (int i = 0; i < NetworkingManager.clientSideRoom.players.size(); i++) {
+                    s = NetworkingManager.clientSideRoom.players.get(i).stackToAdd;
+                }
+            }
             pixmap.fillRectangle(0, pixmap.getHeight() - pixmap.getHeight() / 20 * s, pixmap.getWidth(), pixmap.getHeight() / 20 * s);
             stack = new GameObject2D(pixmap, field.getX() - 20, field.getY());
             spriteBatch.draw(stack);

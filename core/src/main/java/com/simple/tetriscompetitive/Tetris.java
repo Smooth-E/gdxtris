@@ -257,9 +257,14 @@ public class Tetris {
                             }
                         }
                     }
-                    if (linesCleared > 0)
+                    if (linesCleared > 0) {
                         NetworkingManager.playerInfo.score += 100 + 200 * (linesCleared - 1);
-                    if (linesCleared == 4) NetworkingManager.playerInfo.score += 1;
+                        NetworkingManager.playerInfo.stackToAdd += linesCleared;
+                    }
+                    if (linesCleared == 4) {
+                        NetworkingManager.playerInfo.score += 1;
+                        NetworkingManager.playerInfo.stackToAdd += linesCleared;
+                    }
                 } else ticksBeforeLock--;
             } else
                 NetworkingManager.playerInfo.figureY += 1;
