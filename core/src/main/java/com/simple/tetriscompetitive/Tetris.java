@@ -197,7 +197,7 @@ public class Tetris {
 
     public static boolean tick(){
         boolean shouldStop = false;
-        int[][] figure = getFigure().clone();
+        int[][] figure = getFigure();
         for (int y = 0; y < figure.length; y++){
             for (int x = 0; x < figure[0].length; x++){
                 if (figure[y][x] == 1 &&

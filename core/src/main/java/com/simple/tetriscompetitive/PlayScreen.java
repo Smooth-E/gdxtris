@@ -487,14 +487,14 @@ public class PlayScreen implements Screen {
             Color figureColor = new Color(Tetris.figureColors[NetworkingManager.playerInfo.figureID]);
             figureColor.a = 0.5f;
             newField.setColor(figureColor);
-            for (int x = 0; x < figure[0].length; x++){
+            /*for (int x = 0; x < figure[0].length; x++){
                 for (int y = 0; y < figure.length; y++){
                     if (figure[y][x] == 1) {
                         newField.fillRectangle((NetworkingManager.playerInfo.figureX + x) * cellSize,
                                 (NetworkingManager.playerInfo.figureY + y + yd) * cellSize, cellSize, cellSize);
                     }
                 }
-            }
+            }*/
 
 
             field = new GameObject2D(newField, 0, 0);
@@ -531,9 +531,11 @@ public class PlayScreen implements Screen {
                 }
                 holdObject = new GameObject2D(pixmap, holdBG.getX(), holdBG.getY());
                 spriteBatch.draw(holdObject);
+                pixmap.dispose();
             }
 
             spriteBatch.end();
+
 
             int slotWidth = Math.min((nextPieceBG.getHeight() - margin) / 4, nextPieceBG.getWidth() / 2);
             // Drawing next pieces
@@ -553,8 +555,9 @@ public class PlayScreen implements Screen {
                 spriteBatch.draw(o);
                 spriteBatch.end();
                 o.dispose();
-            }
 
+                pixmap.dispose();
+            }
             spriteBatch.begin();
 
             spriteBatch.draw(startGameButton);
@@ -595,12 +598,11 @@ public class PlayScreen implements Screen {
         }
 
         timePassedFromTick += Gdx.graphics.getDeltaTime();
-        if (timePassedFromTick >= 1) {
+        if (timePassedFromTick >= .1f) {
             Tetris.tick();
+            NetworkingManager.client.sendTCP(new Networking.UpdatedGameStateRequest());
             timePassedFromTick = 0;
         }
-
-        NetworkingManager.client.sendTCP(new Networking.UpdatedGameStateRequest());
     }
 
     @Override
