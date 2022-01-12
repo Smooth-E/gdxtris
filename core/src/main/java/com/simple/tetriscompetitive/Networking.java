@@ -16,6 +16,7 @@ public class Networking {
         public int figureID = 2, figureRotation, figureX, figureY, holdID = -1, turn;
         public boolean canPlay = false;
         public boolean holdPerformed = false;
+        public int performStackRelease = 1;
 
         public String toString(){
             return "Player: {name: " + name + ", id: " + id + ", stack: " + stackToAdd + "}";
@@ -102,6 +103,15 @@ public class Networking {
         }
     }
 
+    public static class ReleaseStackRequest {
+        int id;
+
+        public ReleaseStackRequest() {}
+        public ReleaseStackRequest(int id) {
+            this.id = id;
+        }
+    }
+
     public static class ClientListener extends Listener {
         @Override
         public void received(Connection connection, Object object) {
@@ -122,6 +132,8 @@ public class Networking {
                         NetworkingManager.playerInfo.canPlay = playerOnServer.canPlay;
                         NetworkingManager.playerInfo.stackToAdd = playerOnServer.stackToAdd;
                         NetworkingManager.playerInfo.targetID = playerOnServer.targetID;
+                        NetworkingManager.playerInfo.performStackRelease = playerOnServer.performStackRelease;
+                        break;
                     }
                 }
             }
@@ -234,6 +246,29 @@ public class Networking {
                 player.stackToAdd = player.stackToAdd + addition;
                 NetworkingManager.roomInfo.players.set(playerIndex, player);
                 Gdx.app.log("LOG", "attacker: " + attackerIndex + ", player: " + playerIndex + ", addition: " + addition + "\n" + NetworkingManager.roomInfo.players.get(playerIndex));
+            }
+            else if (object instanceof ReleaseStackRequest) {
+                Gdx.app.log("TAG", "Received a stack release req!");
+                int id = ((ReleaseStackRequest) object).id;
+                for (int i = 0; i < NetworkingManager.roomInfo.players.size(); i++) {
+                    if (NetworkingManager.roomInfo.players.get(i).id == id) {
+                        PlayerContainer player = NetworkingManager.roomInfo.players.get(i);
+                        int obtainedStack = player.stackToAdd;
+                        player.stackToAdd = 0;
+                        int target = player.targetID;
+                        NetworkingManager.roomInfo.players.set(i, player);
+                        // Find the target
+                        for (int index = 0; index < NetworkingManager.roomInfo.players.size(); index++) {
+                            if (NetworkingManager.roomInfo.players.get(index).id == target) {
+                                PlayerContainer targetPlayer = NetworkingManager.roomInfo.players.get(index);
+                                targetPlayer.performStackRelease = obtainedStack + 100;
+                                NetworkingManager.roomInfo.players.set(index, targetPlayer);
+                                break;
+                            }
+                        }
+                        break;
+                    }
+                }
             }
             else if (object instanceof DisconnectRequest) {
                 DisconnectRequest request = (DisconnectRequest) object;

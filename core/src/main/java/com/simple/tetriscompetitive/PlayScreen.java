@@ -11,6 +11,7 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.utils.Align;
+import com.sun.source.doctree.TextTree;
 
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -38,8 +39,6 @@ public class PlayScreen implements Screen {
     float ratioWidth, ratioHeight;
 
     String networkAddress = "NO ADDRESS";
-
-    float timeWithStack = 0;
 
     ArrayList<GameObject2D> playSateObjects = new ArrayList<>();
     GameObject2D playStateInfoButton, playSatePlayersButton, playStateOverviewButton;
@@ -623,7 +622,36 @@ public class PlayScreen implements Screen {
                 Tetris.tick();
                 timePassedFromTick = 0;
             }
+
+            Tetris.noClearsTime += delta;
+            if (Tetris.noClearsTime >= 2) {
+                NetworkingManager.client.sendTCP(new Networking.ReleaseStackRequest(NetworkingManager.playerInfo.id));
+                Tetris.noClearsTime = 0;
+            }
         }
+
+        if (NetworkingManager.playerInfo.performStackRelease > 0) {
+            Gdx.app.log("TAG", "Perform the stack thing!");
+            int obtainedStack = NetworkingManager.playerInfo.performStackRelease;
+            for (int x = 0; x < Tetris.fieldWidth; x++) {
+                if (NetworkingManager.playerInfo.field[obtainedStack][x] != -1) {
+                    NetworkingManager.playerInfo.canPlay = false;
+                    break;
+                }
+            }
+            for (int y = 0; y < Tetris.fieldHeight - obtainedStack - 1; y++) {
+                NetworkingManager.playerInfo.field[y] = NetworkingManager.playerInfo.field[y + 1].clone();
+            }
+            int emptyColumn = new Random().nextInt(Tetris.fieldWidth);
+            for (int y = Tetris.fieldHeight - obtainedStack; y < Tetris.fieldHeight; y++) {
+                for (int x = 0; x < Tetris.fieldWidth; x++) {
+                    if (x != emptyColumn) NetworkingManager.playerInfo.field[y][x] = 7;
+                }
+            }
+            NetworkingManager.playerInfo.figureY = 0;
+            NetworkingManager.playerInfo.performStackRelease = 0;
+        }
+
         NetworkingManager.client.sendTCP(new Networking.UpdatedGameStateRequest());
     }
 

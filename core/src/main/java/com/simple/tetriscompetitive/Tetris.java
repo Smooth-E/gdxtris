@@ -171,6 +171,7 @@ public class Tetris {
     };
     public static float autoShiftDelay = 0, autoRepeatDelay = 0;
     public static int ticksBeforeLock = 1;
+    public static float noClearsTime = 0;
 
     public static void generateField(){
         NetworkingManager.playerInfo.field = new int[fieldHeight][fieldHeight];
