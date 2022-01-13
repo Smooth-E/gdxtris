@@ -15,6 +15,7 @@ import com.sun.source.doctree.TextTree;
 
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.security.Key;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -58,6 +59,9 @@ public class PlayScreen implements Screen {
     GameObject2D backToPlayButton, exitGameButton;
     Stage infoStage = new Stage();
 
+    float fadeOutAnimationProgress = 1;
+    Screen nextScreen = null;
+
     @Override
     public void show() {
         try {
@@ -90,36 +94,31 @@ public class PlayScreen implements Screen {
 
         pixmap = new Pixmap(h, h, Pixmap.Format.RGBA8888);
         pixmap.drawPixmap(circle, 0, 0);
-        pixmap.drawPixmap(new Pixmap(Gdx.files.internal("left.png")),
-                0, 0, 1000, 1000, 0, 0, h, h);
+        pixmap.drawPixmap(Drawing.getIcon("left.png", h, h, GameSuper.palette.secondary), 0, 0);
         playSateObjects.add(new GameObject2D(pixmap, (screenWidth - w) / 2f + margin, y));
         stepLeftButton = playSateObjects.get(playSateObjects.size() - 1);
 
         pixmap = new Pixmap(h, h, Pixmap.Format.RGBA8888);
         pixmap.drawPixmap(circle, 0, 0);
-        pixmap.drawPixmap(new Pixmap(Gdx.files.internal("right.png")),
-                0, 0, 1000, 1000, 0, 0, h, h);
+        pixmap.drawPixmap(Drawing.getIcon("right.png", h, h, GameSuper.palette.secondary), 0, 0);
         playSateObjects.add(new GameObject2D(pixmap, (screenWidth - w) / 2f + margin + h + margin, y));
         stepRightButton = playSateObjects.get(playSateObjects.size() - 1);
 
         pixmap = new Pixmap(h, h, Pixmap.Format.RGBA8888);
         pixmap.drawPixmap(circle, 0, 0);
-        pixmap.drawPixmap(new Pixmap(Gdx.files.internal("down.png")),
-                0, 0, 1000, 1000, 0, 0, h, h);
+        pixmap.drawPixmap(Drawing.getIcon("down.png", h, h, GameSuper.palette.secondary), 0, 0);
         playSateObjects.add(new GameObject2D(pixmap, (screenWidth - w) / 2f + margin + h * 2 + margin * 2, y));
         stepDownButton = playSateObjects.get(playSateObjects.size() - 1);
 
         pixmap = new Pixmap(h, h, Pixmap.Format.RGBA8888);
         pixmap.drawPixmap(circle, 0, 0);
-        pixmap.drawPixmap(new Pixmap(Gdx.files.internal("clockwise.png")),
-                0, 0, 1000, 1000, 0, 0, h, h);
+        pixmap.drawPixmap(Drawing.getIcon("clockwise.png", h, h, GameSuper.palette.secondary), 0, 0);
         playSateObjects.add(new GameObject2D(pixmap, (screenWidth - w) / 2f + margin + h * 3 + margin * 3, y));
         rotateClockwiseButton = playSateObjects.get(playSateObjects.size() - 1);
 
         pixmap = new Pixmap(h, h, Pixmap.Format.RGBA8888);
         pixmap.drawPixmap(circle, 0, 0);
-        pixmap.drawPixmap(new Pixmap(Gdx.files.internal("anticlockwise.png")),
-                0, 0, 1000, 1000, 0, 0, h, h);
+        pixmap.drawPixmap(Drawing.getIcon("anticlockwise.png", h, h, GameSuper.palette.secondary), 0, 0);
         playSateObjects.add(new GameObject2D(pixmap, (screenWidth - w) / 2f + margin + h * 4 + margin * 4, y));
         rotateAntiClockwiseButton = playSateObjects.get(playSateObjects.size() - 1);
 
@@ -127,22 +126,19 @@ public class PlayScreen implements Screen {
 
         pixmap = new Pixmap(h, h, Pixmap.Format.RGBA8888);
         pixmap.drawPixmap(circle, 0, 0);
-        pixmap.drawPixmap(new Pixmap(Gdx.files.internal("rotate180.png")),
-                0, 0, 1000, 1000, 0, 0, h, h);
+        pixmap.drawPixmap(Drawing.getIcon("rotate180.png", h, h, GameSuper.palette.secondary), 0, 0);
         playSateObjects.add(new GameObject2D(pixmap, (screenWidth - w) / 2f + margin + h * 2 + margin * 2, y));
         rotate180Button = playSateObjects.get(playSateObjects.size() - 1);
 
         pixmap = new Pixmap(h, h, Pixmap.Format.RGBA8888);
         pixmap.drawPixmap(circle, 0, 0);
-        pixmap.drawPixmap(new Pixmap(Gdx.files.internal("exchange.png")),
-                0, 0, 1000, 1000, 0, 0, h, h);
+        pixmap.drawPixmap(Drawing.getIcon("exchange.png", h, h, GameSuper.palette.secondary), 0, 0);
         playSateObjects.add(new GameObject2D(pixmap, (screenWidth - w) / 2f + margin + h * 3 + margin * 3, y));
         exchangeButton = playSateObjects.get(playSateObjects.size() - 1);
 
         pixmap = new Pixmap(h, h, Pixmap.Format.RGBA8888);
         pixmap.drawPixmap(circle, 0, 0);
-        pixmap.drawPixmap(new Pixmap(Gdx.files.internal("instant.png")),
-                0, 0, 1000, 1000, 0, 0, h, h);
+        pixmap.drawPixmap(Drawing.getIcon("instant.png", h, h, GameSuper.palette.secondary), 0, 0);
         playSateObjects.add(new GameObject2D(pixmap, (screenWidth - w) / 2f + margin + h * 4 + margin * 4, y));
         instantPlaceButton = playSateObjects.get(playSateObjects.size() - 1);
 
@@ -165,16 +161,16 @@ public class PlayScreen implements Screen {
         y = screenHeight - playFieldHeight - 100 * ratioHeight;
 
         w = screenWidth - (int)x * 2 - playFieldWidth - 20;
-        pixmap = Drawing.createRoundedRectangle(w * 2, w, margin, GameSuper.palette.onPrimary);
-        pixmap.drawPixmap(Drawing.createRoundedRectangle(pixmap.getWidth() - 1,
-                pixmap.getHeight() - 1, margin, GameSuper.palette.secondary), 0, 0);
+        pixmap = Drawing.createRoundedRectangle(w * 2, w, margin, GameSuper.palette.secondary);
+        pixmap.drawPixmap(Drawing.createRoundedRectangle(pixmap.getWidth() - 10,
+                pixmap.getHeight() - 10, margin, Color.BLACK), 5, 5);
         playSateObjects.add(new GameObject2D(pixmap,
                 x + 20 + playFieldWidth - pixmap.getWidth() / 2f, y + playFieldHeight - pixmap.getHeight() - 1));
         holdBG = playSateObjects.get(playSateObjects.size() - 1);
 
-        pixmap = Drawing.createRoundedRectangle(pixmap.getWidth(), pixmap.getHeight() * 3, margin, GameSuper.palette.onPrimary);
-        pixmap.drawPixmap(Drawing.createRoundedRectangle(pixmap.getWidth() - 1, pixmap.getHeight() - 1,
-                10, GameSuper.palette.secondary), 0, 0);
+        pixmap = Drawing.createRoundedRectangle(pixmap.getWidth(), pixmap.getHeight() * 3, margin, GameSuper.palette.secondary);
+        pixmap.drawPixmap(Drawing.createRoundedRectangle(pixmap.getWidth() - 10, pixmap.getHeight() - 10,
+                10, Color.BLACK), 5, 5);
         playSateObjects.add(new GameObject2D(pixmap, holdBG.getX(), holdBG.getY() - holdBG.getHeight() * 3 - margin));
         nextPieceBG = playSateObjects.get(playSateObjects.size() - 1);
 
@@ -183,8 +179,7 @@ public class PlayScreen implements Screen {
         pixmap = new Pixmap(w, w, Pixmap.Format.RGBA8888);
         pixmap.setColor(GameSuper.palette.primary);
         pixmap.fillCircle(pixmap.getWidth() / 2, pixmap.getHeight() / 2, w / 2);
-        pixmap.drawPixmap(new Pixmap(Gdx.files.internal("help.png")),
-                0, 0, 1000, 1000, 0, 0, w, w);
+        pixmap.drawPixmap(Drawing.getIcon("help.png", w, w, GameSuper.palette.secondary), 0, 0);
         playSateObjects.add(new GameObject2D(pixmap, holdBG.getX() + holdBG.getWidth() / 2f + margin * 2, y));
         playStateInfoButton = playSateObjects.get(playSateObjects.size() - 1);
 
@@ -267,12 +262,10 @@ public class PlayScreen implements Screen {
         pixmap = Drawing.createRoundedRectangle(screenWidth - margin * 2, unitHeight, unitHeight / 2, GameSuper.palette.onSecondary);
         infoStateObjects.add(new GameObject2D(pixmap, margin, screenHeight - pixmap.getHeight() - 2 * margin));
 
-        pixmap = new Pixmap(unitHeight, unitHeight, Pixmap.Format.RGBA8888);
-        pixmap.drawPixmap(new Pixmap(Gdx.files.internal("left.png")), 0, 0, 1000, 1000, 0, 0, unitHeight, unitHeight);
+        pixmap = Drawing.getIcon("left.png", unitHeight, unitHeight, GameSuper.palette.secondary);
         backToPlayButton = new GameObject2D(pixmap, margin, infoStateObjects.get(0).getY());
 
-        pixmap = new Pixmap(unitHeight, unitHeight, Pixmap.Format.RGBA8888);
-        pixmap.drawPixmap(new Pixmap(Gdx.files.internal("exit.png")), 0, 0, 1000, 1000, 0, 0, pixmap.getWidth(), pixmap.getHeight());
+        pixmap = Drawing.getIcon("exit.png", unitHeight, unitHeight, GameSuper.palette.secondary);
         exitGameButton = new GameObject2D(pixmap, screenWidth - margin - pixmap.getWidth(), backToPlayButton.getY());
 
         parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
@@ -296,25 +289,9 @@ public class PlayScreen implements Screen {
 
         labelStyle = new Label.LabelStyle(font, Color.WHITE);
 
-        Pixmap pic = new Pixmap(unitHeight, unitHeight, Pixmap.Format.RGBA8888);
-        pic.drawPixmap(new Pixmap(Gdx.files.internal("profile-pic.png")), 0, 0, 1000, 1000,
-                0, 0, pic.getWidth() - 2 * margin, pic.getHeight() - 2 * margin);
-        pic.setColor(GameSuper.palette.onSecondary);
-        for (int px = 0; px < pic.getWidth(); px++) {
-            for (int py = 0; py < pic.getHeight(); py++) {
-                if (pic.getPixel(px, py) != Color.CLEAR.toIntBits()) pic.drawPixel(px, py);
-            }
-        }
+        Pixmap pic = Drawing.getIcon("profile-pic.png", unitHeight - 2 * margin, unitHeight - 2 * margin, GameSuper.palette.onSecondary);
 
-        Pixmap eye = new Pixmap(pic.getWidth(), pic.getHeight(), Pixmap.Format.RGBA8888);
-        eye.drawPixmap(new Pixmap(Gdx.files.internal("eye.png")), 0, 0, 1000, 1000,
-                0, 0, pic.getWidth() - 2 * margin, pic.getHeight() - 2 * margin);
-        eye.setColor(GameSuper.palette.primary);
-        for (int px = 0; px < pic.getWidth(); px++) {
-            for (int py = 0; py < pic.getHeight(); py++) {
-                if (eye.getPixel(px, py) != Color.CLEAR.toIntBits()) eye.drawPixel(px, py);
-            }
-        }
+        Pixmap eye = Drawing.getIcon("eye.png", pic.getWidth() - 2 * margin, pic.getHeight() - 2 * margin, GameSuper.palette.primary);
 
         Pixmap divider = new Pixmap(screenWidth - 2 * margin, 10, Pixmap.Format.RGB888);
         divider.setColor(GameSuper.palette.primary);
@@ -330,8 +307,8 @@ public class PlayScreen implements Screen {
 
             GameObject2D[] batch = new GameObject2D[3];
 
-            batch[0] = new GameObject2D(pic, 0, unitHeight * (9 - i) - margin);
-            batch[1] = new GameObject2D(eye, screenWidth - eye.getWidth(), unitHeight * (9 - i) - margin);
+            batch[0] = new GameObject2D(pic, 0, unitHeight * (9 - i));
+            batch[1] = new GameObject2D(eye, screenWidth - eye.getWidth(), unitHeight * (9 - i));
             batch[2] = new GameObject2D(divider, margin, unitHeight * (9 - i) - divider.getHeight() / 2f);
             playerInfoCosmeticElements.add(batch);
         }
@@ -398,6 +375,11 @@ public class PlayScreen implements Screen {
         previousRoomStatus = NetworkingManager.clientSideRoom.status;
 
         //Logic
+        if (Gdx.input.isKeyJustPressed(Input.Keys.BACK)) {
+            if (state == STATE_PLAYING) state = STATE_INFO;
+            else if (state == STATE_INFO) state = STATE_PLAYING;
+        }
+
         if (Gdx.input.justTouched()){
             int x = Gdx.input.getX(), y = screenHeight - Gdx.input.getY();
             if (state == STATE_PLAYING) {
@@ -421,7 +403,7 @@ public class PlayScreen implements Screen {
                         NetworkingManager.server.sendToAllTCP(new Networking.GameEndRequest());
                         NetworkingManager.server.close();
                     }
-                    GameSuper.instance.setScreen(new MenuScreen());
+                    nextScreen = new MenuScreen();
                 }
             }
         }
@@ -518,7 +500,7 @@ public class PlayScreen implements Screen {
             spriteBatch.draw(field);
 
             Pixmap pixmap = new Pixmap(20, field.getHeight(), Pixmap.Format.RGB888);
-            pixmap.setColor(GameSuper.palette.secondary);
+            pixmap.setColor(Color.BLACK);
             pixmap.fill();
             pixmap.setColor(GameSuper.palette.onPrimary);
             pixmap.drawRectangle(0, 0, pixmap.getWidth(), pixmap.getHeight());
@@ -542,10 +524,11 @@ public class PlayScreen implements Screen {
                 pixmap = new Pixmap(holdBG.getWidth(), holdBG.getHeight(), Pixmap.Format.RGBA8888);
                 cellSize = Math.min((holdBG.getWidth() / 2 - 2 * margin) / hold[0].length, (holdBG.getHeight() - 2 * margin) / hold.length);
                 if (!NetworkingManager.playerInfo.holdPerformed) pixmap.setColor(Tetris.figureColors.clone()[NetworkingManager.playerInfo.holdID]);
-                else pixmap.setColor(Color.DARK_GRAY);
+                else pixmap.setColor(Color.GRAY);
                 for (int fx = 0; fx < hold[0].length; fx++) {
                     for (int fy = 0 ; fy < hold.length; fy++) {
-                        if (hold[fy][fx] == 1) pixmap.fillRectangle(holdBG.getWidth() / 2 + margin + fx * cellSize, margin + fy * cellSize, cellSize, cellSize);
+                        if (hold[fy][fx] == 1)
+                            pixmap.fillRectangle(holdBG.getWidth() / 2 + margin + fx * cellSize, (int)(margin * 1.5f + fy * cellSize), cellSize, cellSize);
                     }
                 }
                 holdObject = new GameObject2D(pixmap, holdBG.getX(), holdBG.getY());
@@ -566,7 +549,7 @@ public class PlayScreen implements Screen {
                 pixmap.setColor(Tetris.figureColors[figureID]);
                 for (int fy = 0; fy < nextFigure.length; fy++) {
                     for (int fx = 0; fx < nextFigure[0].length; fx++) {
-                        if (nextFigure[fy][fx] == 1) pixmap.fillRectangle(margin + fx * cellSize, margin + fy * cellSize, cellSize, cellSize);
+                        if (nextFigure[fy][fx] == 1) pixmap.fillRectangle(margin * 2 + fx * cellSize, margin * 2 + fy * cellSize, cellSize, cellSize);
                     }
                 }
                 GameObject2D o = new GameObject2D(pixmap, nextPieceBG.getX() + nextPieceBG.getWidth() / 2f, nextPieceBG.getY() + nextPieceBG.getHeight() - i * slotWidth);
@@ -654,6 +637,34 @@ public class PlayScreen implements Screen {
         }
 
         NetworkingManager.client.sendTCP(new Networking.UpdatedGameStateRequest());
+
+        // Transition animation
+        if (nextScreen != null) {
+            fadeOutAnimationProgress += 1 / 15f;
+            if (fadeOutAnimationProgress >= 1.5) {
+                GameSuper.instance.setScreen(nextScreen);
+            }
+        }
+        else if (fadeOutAnimationProgress > 0) {
+            fadeOutAnimationProgress -= 1 / 15f;
+            if (fadeOutAnimationProgress < 0) fadeOutAnimationProgress = 0;
+        }
+
+        Pixmap pad = new Pixmap(screenWidth, screenHeight, Pixmap.Format.RGBA8888);
+        Color color = new Color(GameSuper.palette.secondary);
+        float alpha = fadeOutAnimationProgress;
+        if (alpha > 1) alpha = 1;
+        color.a = alpha;
+        pad.setColor(color);
+        pad.fill();
+        spriteBatch.begin();
+        GameObject2D padObject = new GameObject2D(pad, 0, 0);
+        spriteBatch.draw(padObject);
+        spriteBatch.end();
+        pad.dispose();
+        padObject.dispose();
+
+        if (fadeOutAnimationProgress == -1) fadeOutAnimationProgress = 1;
     }
 
     @Override

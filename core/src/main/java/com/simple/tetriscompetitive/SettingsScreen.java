@@ -23,6 +23,9 @@ public class SettingsScreen implements Screen {
 
     int screenHeight, screenWidth;
 
+    float fadeOutAnimationProgress = 1;
+    Screen nextScreen = null;
+
     @Override
     public void show() {
         screenHeight = Gdx.graphics.getHeight();
@@ -30,7 +33,7 @@ public class SettingsScreen implements Screen {
 
         int h = screenHeight / 7;
         Pixmap pixmap = Drawing.createRoundedRectangle((screenWidth - 40), h - 20, h / 2 - 10, GameSuper.palette.onSecondary);
-        pixmap.drawPixmap(new Pixmap(Gdx.files.internal("left.png")), 0, 0, 1000, 1000, 0, 0, pixmap.getHeight(), pixmap.getHeight());
+        pixmap.drawPixmap(Drawing.getIcon("left.png", pixmap.getHeight(), pixmap.getHeight(), GameSuper.palette.secondary), 0, 0);
         backButton = new GameObject2D(pixmap, 20, 20);
 
         for (int i = 0; i < GameSuper.palettes.length; i++){
@@ -50,17 +53,18 @@ public class SettingsScreen implements Screen {
 
             for (int x = 0; x < pixmap.getWidth(); x++) {
                 for (int y = 0; y < pixmap.getHeight(); y++) {
-                    if (pixmap.getPixel(x, y) != Color.BLACK.toIntBits() && pixmap.getPixel(x, y) != Color.CLEAR.toIntBits()) pixmap.drawPixel(x, y, overlay.getPixel(x, y));
+                    if (pixmap.getPixel(x, y) != Color.CLEAR.toIntBits()) pixmap.drawPixel(x, y, overlay.getPixel(x, y));
                 }
             }
 
             themeButtons.add(new GameObject2D(pixmap, 20, h + h * i + 10));
-
+            pixmap.dispose();
         }
 
         FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
         parameter.size = Math.min(h - 20, screenWidth / "themes".length());
         parameter.color = GameSuper.palette.onSecondary;
+        parameter.characters = "Thems";
 
         BitmapFont font = GameSuper.mainFontGenerator.generateFont(parameter);
 
@@ -81,14 +85,14 @@ public class SettingsScreen implements Screen {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
         if (Gdx.input.justTouched()) {
-            if (backButton.contains()) GameSuper.instance.setScreen(new MenuScreen());
+            if (backButton.contains()) nextScreen = new MenuScreen();
             else {
                 for (int i = 0; i < themeButtons.size(); i++) {
                     if (themeButtons.get(i).contains()) {
                         DataManagement.data.colorSchemeIndex = i;
                         DataManagement.saveData();
                         GameSuper.palette = GameSuper.palettes[i];
-                        GameSuper.instance.setScreen(new SettingsScreen());
+                        nextScreen = new SettingsScreen();
                     }
                 }
             }
@@ -102,6 +106,34 @@ public class SettingsScreen implements Screen {
 
         stage.act();
         stage.draw();
+
+        // Transition animation
+        if (nextScreen != null) {
+            fadeOutAnimationProgress += 1 / 15f;
+            if (fadeOutAnimationProgress >= 1.5) {
+                GameSuper.instance.setScreen(nextScreen);
+            }
+        }
+        else if (fadeOutAnimationProgress > 0) {
+            fadeOutAnimationProgress -= 1 / 15f;
+            if (fadeOutAnimationProgress < 0) fadeOutAnimationProgress = 0;
+        }
+
+        Pixmap pad = new Pixmap(screenWidth, screenHeight, Pixmap.Format.RGBA8888);
+        Color color = new Color(GameSuper.palette.secondary);
+        float alpha = fadeOutAnimationProgress;
+        if (alpha > 1) alpha = 1;
+        color.a = alpha;
+        pad.setColor(color);
+        pad.fill();
+        spriteBatch.begin();
+        GameObject2D padObject = new GameObject2D(pad, 0, 0);
+        spriteBatch.draw(padObject);
+        spriteBatch.end();
+        pad.dispose();
+        padObject.dispose();
+
+        if (fadeOutAnimationProgress == -1) fadeOutAnimationProgress = 1;
     }
 
     @Override
