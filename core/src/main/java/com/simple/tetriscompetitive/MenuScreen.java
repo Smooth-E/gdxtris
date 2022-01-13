@@ -40,7 +40,9 @@ public class MenuScreen implements Screen {
     Screen nextScreen = null;
 
     @Override
-    public void show() {
+    public void show() {}
+
+    public void init() {
         screenHeight = Gdx.graphics.getHeight();
         screenWidth = Gdx.graphics.getWidth();
         float ratioHeight = screenHeight / 1920f, ratioWidth = screenWidth / 1080f;
@@ -262,15 +264,17 @@ public class MenuScreen implements Screen {
 
                 if (connectButton.contains() && !remoteHostNameTextField.getText().equals("")) {
                     if (NetworkingManager.startClient(remoteHostNameTextField.getText()))
-                        nextScreen = new PlayScreen(false);
+                        GameSuper.instance.playScreen.isAdmin = false;
+                        nextScreen = GameSuper.instance.playScreen;
                 }
 
                 if (hostButton.contains()) {
                     if (NetworkingManager.startHost(roomNameTextField.getText()))
-                        nextScreen = new PlayScreen(true);
+                        GameSuper.instance.playScreen.isAdmin = true;
+                        nextScreen = GameSuper.instance.playScreen;
                 }
 
-                if (settingsButton.contains()) nextScreen = new SettingsScreen();
+                if (settingsButton.contains()) nextScreen = GameSuper.instance.settingsScreen;
             }
             else {
                 if (acceptExitButton.contains()) Gdx.app.exit();

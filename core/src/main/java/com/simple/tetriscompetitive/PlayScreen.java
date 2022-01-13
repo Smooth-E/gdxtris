@@ -23,10 +23,6 @@ public class PlayScreen implements Screen {
 
     public boolean isAdmin = false;
 
-    public PlayScreen(boolean isAdmin) {
-        this.isAdmin = isAdmin;
-    }
-
     static final int STATE_PLAYING = 0, STATE_INFO = 1;
     int state = STATE_PLAYING;
 
@@ -62,7 +58,6 @@ public class PlayScreen implements Screen {
     float fadeOutAnimationProgress = 1;
     Screen nextScreen = null;
 
-    @Override
     public void show() {
         try {
             Socket socket = new Socket();
@@ -403,7 +398,7 @@ public class PlayScreen implements Screen {
                         NetworkingManager.server.sendToAllTCP(new Networking.GameEndRequest());
                         NetworkingManager.server.close();
                     }
-                    nextScreen = new MenuScreen();
+                    nextScreen = GameSuper.instance.menuScreen;
                 }
             }
         }

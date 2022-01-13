@@ -31,7 +31,10 @@ public class GameSuper extends Game {
 
     public static GameSuper instance;
 
-    public static MenuScreen menuScreen;
+    public MenuScreen menuScreen;
+    public PlayScreen playScreen;
+    public SettingsScreen settingsScreen;
+    public LoadingScreen loadingScreen;
 
     @Override
     public void create() {
@@ -44,9 +47,7 @@ public class GameSuper extends Game {
         mainFontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("Product Sans Regular.ttf"));
         DataManagement.loadData();
         palette = palettes[DataManagement.data.colorSchemeIndex];
-        menuScreen = new MenuScreen();
-        LoadingScreen loadingScreen = new LoadingScreen();
+        loadingScreen = new LoadingScreen();
         setScreen(loadingScreen);
-        //setScreen(new PlayScreen(true));
     }
 }

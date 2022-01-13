@@ -27,7 +27,9 @@ public class SettingsScreen implements Screen {
     Screen nextScreen = null;
 
     @Override
-    public void show() {
+    public void show() {}
+
+    public void init() {
         screenHeight = Gdx.graphics.getHeight();
         screenWidth = Gdx.graphics.getWidth();
 
@@ -85,14 +87,14 @@ public class SettingsScreen implements Screen {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
         if (Gdx.input.justTouched()) {
-            if (backButton.contains()) nextScreen = new MenuScreen();
+            if (backButton.contains()) nextScreen = GameSuper.instance.menuScreen;
             else {
                 for (int i = 0; i < themeButtons.size(); i++) {
                     if (themeButtons.get(i).contains()) {
                         DataManagement.data.colorSchemeIndex = i;
                         DataManagement.saveData();
                         GameSuper.palette = GameSuper.palettes[i];
-                        nextScreen = new SettingsScreen();
+                        nextScreen = GameSuper.instance.loadingScreen;
                     }
                 }
             }
