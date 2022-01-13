@@ -40,9 +40,7 @@ public class MenuScreen implements Screen {
     Screen nextScreen = null;
 
     @Override
-    public void show() {}
-
-    public void init() {
+    public void show() {
         screenHeight = Gdx.graphics.getHeight();
         screenWidth = Gdx.graphics.getWidth();
         float ratioHeight = screenHeight / 1920f, ratioWidth = screenWidth / 1080f;
@@ -264,17 +262,15 @@ public class MenuScreen implements Screen {
 
                 if (connectButton.contains() && !remoteHostNameTextField.getText().equals("")) {
                     if (NetworkingManager.startClient(remoteHostNameTextField.getText()))
-                        GameSuper.instance.playScreen.isAdmin = false;
-                        nextScreen = GameSuper.instance.playScreen;
+                        nextScreen = new PlayScreen(false);
                 }
 
                 if (hostButton.contains()) {
                     if (NetworkingManager.startHost(roomNameTextField.getText()))
-                        GameSuper.instance.playScreen.isAdmin = true;
-                        nextScreen = GameSuper.instance.playScreen;
+                        nextScreen = new PlayScreen(true);
                 }
 
-                if (settingsButton.contains()) nextScreen = GameSuper.instance.settingsScreen;
+                if (settingsButton.contains()) nextScreen = new SettingsScreen();
             }
             else {
                 if (acceptExitButton.contains()) Gdx.app.exit();
@@ -308,13 +304,13 @@ public class MenuScreen implements Screen {
         }
 
         if (nextScreen != null) {
-            fadeOutAnimationProgress += 1 / 15f;
+            fadeOutAnimationProgress += 1 / 5f;
             if (fadeOutAnimationProgress >= 1.5) {
                 GameSuper.instance.setScreen(nextScreen);
             }
         }
         else if (fadeOutAnimationProgress > 0) {
-            fadeOutAnimationProgress -= 1 / 15f;
+            fadeOutAnimationProgress -= 1 / 5f;
             if (fadeOutAnimationProgress < 0) fadeOutAnimationProgress = 0;
         }
 

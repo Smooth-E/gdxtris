@@ -27,9 +27,7 @@ public class SettingsScreen implements Screen {
     Screen nextScreen = null;
 
     @Override
-    public void show() {}
-
-    public void init() {
+    public void show() {
         screenHeight = Gdx.graphics.getHeight();
         screenWidth = Gdx.graphics.getWidth();
 
@@ -87,14 +85,14 @@ public class SettingsScreen implements Screen {
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
         if (Gdx.input.justTouched()) {
-            if (backButton.contains()) nextScreen = GameSuper.instance.menuScreen;
+            if (backButton.contains()) nextScreen = new MenuScreen();
             else {
                 for (int i = 0; i < themeButtons.size(); i++) {
                     if (themeButtons.get(i).contains()) {
                         DataManagement.data.colorSchemeIndex = i;
                         DataManagement.saveData();
                         GameSuper.palette = GameSuper.palettes[i];
-                        nextScreen = GameSuper.instance.loadingScreen;
+                        nextScreen = new SettingsScreen();
                     }
                 }
             }
@@ -111,13 +109,13 @@ public class SettingsScreen implements Screen {
 
         // Transition animation
         if (nextScreen != null) {
-            fadeOutAnimationProgress += 1 / 15f;
+            fadeOutAnimationProgress += 1 / 5f;
             if (fadeOutAnimationProgress >= 1.5) {
                 GameSuper.instance.setScreen(nextScreen);
             }
         }
         else if (fadeOutAnimationProgress > 0) {
-            fadeOutAnimationProgress -= 1 / 15f;
+            fadeOutAnimationProgress -= 1 / 5f;
             if (fadeOutAnimationProgress < 0) fadeOutAnimationProgress = 0;
         }
 
