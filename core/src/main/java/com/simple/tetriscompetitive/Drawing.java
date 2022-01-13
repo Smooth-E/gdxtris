@@ -1,5 +1,6 @@
 package com.simple.tetriscompetitive;
 
+import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 
@@ -61,5 +62,17 @@ public class Drawing {
 
     public static Pixmap createButtonPixmap(int width, int height, float shadowPercentXY){
         return createButtonPixmap(width, height, width * shadowPercentXY, height * shadowPercentXY);
+    }
+
+    public static Pixmap getIcon(String path, int width, int height, Color color) {
+        Pixmap resized = new Pixmap(width, height, Pixmap.Format.RGBA8888);
+        resized.drawPixmap(new Pixmap(Gdx.files.internal(path)), 0, 0, 1000, 1000, 0, 0, width, height);
+        resized.setColor(color);
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                if (resized.getPixel(x, y) != Color.CLEAR.toIntBits()) resized.drawPixel(x, y);
+            }
+        }
+        return resized;
     }
 }

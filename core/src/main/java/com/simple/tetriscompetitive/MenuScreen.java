@@ -1,5 +1,6 @@
 package com.simple.tetriscompetitive;
 
+import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.Screen;
@@ -20,13 +21,20 @@ import java.util.ArrayList;
 
 public class MenuScreen implements Screen {
 
-    static Stage stage = new Stage();
-    static GameObject2D.MySpriteBatch spriteBatch = new GameObject2D.MySpriteBatch();
-    static Label hostButtonLabel, connectButtonLabel;
-    static TextField playerNameTextField, roomNameTextField, remoteHostNameTextField;
-    static GameObject2D hostButton, connectButton, settingsButton;
-    static ArrayList<GameObject2D> objects = new ArrayList<>();
-    static int screenWidth, screenHeight;
+    boolean askToExit = false;
+
+    Stage stage = new Stage();
+    GameObject2D.MySpriteBatch spriteBatch = new GameObject2D.MySpriteBatch();
+    Label hostButtonLabel, connectButtonLabel;
+    TextField playerNameTextField, roomNameTextField, remoteHostNameTextField;
+    GameObject2D hostButton, connectButton, settingsButton;
+    ArrayList<GameObject2D> objects = new ArrayList<>();
+    int screenWidth, screenHeight;
+
+    ArrayList<GameObject2D> askToExitObjects = new ArrayList<>();
+    GameObject2D acceptExitButton, declineExitButton;
+    Label acceptExitLabel, declineExitLabel, askExitLabel;
+    Stage askToExitStage = new Stage();
 
     @Override
     public void show() {
@@ -177,39 +185,92 @@ public class MenuScreen implements Screen {
         });
         stage.addActor(roomNameTextField);
 
-        Gdx.input.setInputProcessor(stage);
+        // Create an exit dialog
+        int margin = screenWidth / 10;
+
+        pixmap = new Pixmap(screenWidth, screenHeight, Pixmap.Format.RGBA8888);
+        Color color = new Color(GameSuper.palette.primary);
+        color.a = .5f;
+        pixmap.setColor(color);
+        pixmap.fill();
+        askToExitObjects.add(new GameObject2D(pixmap, 0, 0));
+        pixmap.dispose();
+
+        pixmap = new Pixmap(screenWidth - 2 * margin, screenHeight / 3, Pixmap.Format.RGBA8888);
+        pixmap.drawPixmap(Drawing.createRoundedRectangle(pixmap.getWidth(), pixmap.getHeight(),
+                screenHeight / 3 / 4, GameSuper.palette.secondary), 0, 0);
+        askToExitObjects.add(new GameObject2D(pixmap, margin, screenHeight / 3f));
+        pixmap.dispose();
+
+        parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        parameter.size = Math.min(screenHeight / 6 / 2, (screenWidth - 2 * margin) / "Are you sure".length());
+        parameter.color = GameSuper.palette.onSecondary;
+
+        font = GameSuper.mainFontGenerator.generateFont(parameter);
+
+        askExitLabel = new Label("Are you sure\nyou want to exit?", new Label.LabelStyle(font, Color.WHITE));
+        askExitLabel.setPosition(margin, screenHeight / 3f + screenHeight / 3f / 2f, Align.bottomLeft);
+        askExitLabel.setSize(screenWidth - 2 * margin, screenHeight / 3f / 2f);
+        askExitLabel.setAlignment(Align.center);
+        askToExitStage.addActor(askExitLabel);
+
+        pixmap = new Pixmap((screenWidth - 2 * margin - margin) / 2, screenHeight / 3 / 2 - margin, Pixmap.Format.RGBA8888);
+        pixmap.drawPixmap(Drawing.createRoundedRectangle(pixmap.getWidth() * 2, pixmap.getHeight(),
+                pixmap.getHeight() / 2, GameSuper.palette.onSecondary), 0, 0);
+        pixmap.drawPixmap(Drawing.getIcon("tick.png", pixmap.getHeight() * 2 / 3, pixmap.getHeight() * 2 / 3,
+                GameSuper.palette.secondary), (pixmap.getWidth() - pixmap.getHeight() * 2 / 3) / 2, pixmap.getHeight() / 3 / 2);
+        acceptExitButton = new GameObject2D(pixmap, margin * 1.5f, screenHeight / 3f + margin / 2f);
+        pixmap.dispose();
+
+        pixmap = new Pixmap((screenWidth - 2 * margin - margin) / 2, screenHeight / 3 / 2 - margin, Pixmap.Format.RGBA8888);
+        pixmap.drawPixmap(Drawing.createRoundedRectangle(pixmap.getWidth() * 2, pixmap.getHeight(),
+                pixmap.getHeight() / 2, GameSuper.palette.onSecondary), -pixmap.getWidth(), 0);
+        pixmap.drawPixmap(Drawing.getIcon("cross.png", pixmap.getHeight() * 2 / 3, pixmap.getHeight() * 2 / 3,
+                GameSuper.palette.secondary), (pixmap.getWidth() - pixmap.getHeight() * 2 / 3) / 2, pixmap.getHeight() / 3 / 2);
+        declineExitButton = new GameObject2D(pixmap, margin * 1.5f + pixmap.getWidth(), screenHeight / 3f + margin / 2f);
+        pixmap.dispose();
     }
 
     @Override
     public void render(float delta) {
+        if (!askToExit) Gdx.input.setInputProcessor(stage);
+        else Gdx.input.setInputProcessor(askToExitStage);
+
         Color c = GameSuper.palette.secondary;
         Gdx.gl.glViewport(0, 0, Gdx.graphics.getWidth(), Gdx.graphics.getHeight());
         Gdx.gl.glClearColor(c.r,c.g,c.b,1);
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT | GL20.GL_DEPTH_BUFFER_BIT);
 
+        if (Gdx.input.isKeyJustPressed(Input.Keys.BACK)) askToExit = !askToExit;
+
         if (Gdx.input.justTouched()) {
             int mouseX = Gdx.input.getX(), mouseY = Gdx.input.getY();
 
-            if (GameObject2D.checkContains(playerNameTextField)) {
-                stage.setKeyboardFocus(playerNameTextField);
-                playerNameTextField.getOnscreenKeyboard().show(true);
+            if (!askToExit) {
+                if (GameObject2D.checkContains(playerNameTextField)) {
+                    stage.setKeyboardFocus(playerNameTextField);
+                    playerNameTextField.getOnscreenKeyboard().show(true);
+                } else {
+                    stage.unfocus(playerNameTextField);
+                    playerNameTextField.getOnscreenKeyboard().show(false);
+                }
+
+                if (connectButton.contains() && !remoteHostNameTextField.getText().equals("")) {
+                    if (NetworkingManager.startClient(remoteHostNameTextField.getText()))
+                        GameSuper.instance.setScreen(new PlayScreen(false));
+                }
+
+                if (hostButton.contains()) {
+                    if (NetworkingManager.startHost(roomNameTextField.getText()))
+                        GameSuper.instance.setScreen(new PlayScreen(true));
+                }
+
+                if (settingsButton.contains()) GameSuper.instance.setScreen(new SettingsScreen());
             }
             else {
-                stage.unfocus(playerNameTextField);
-                playerNameTextField.getOnscreenKeyboard().show(false);
+                if (acceptExitButton.contains()) Gdx.app.exit();
+                else if (declineExitButton.contains()) askToExit = false;
             }
-
-            if (connectButton.contains() && !remoteHostNameTextField.getText().equals("")) {
-                if (NetworkingManager.startClient(remoteHostNameTextField.getText()))
-                    GameSuper.instance.setScreen(new PlayScreen(false));
-            }
-
-            if (hostButton.contains()){
-                if (NetworkingManager.startHost(roomNameTextField.getText()))
-                    GameSuper.instance.setScreen(new PlayScreen(true));
-            }
-
-            if (settingsButton.contains()) GameSuper.instance.setScreen(new SettingsScreen());
         }
 
         if (playerNameTextField.hasKeyboardFocus()) playerNameTextField.getOnscreenKeyboard().show(true);
@@ -226,6 +287,16 @@ public class MenuScreen implements Screen {
         spriteBatch.end();
 
         stage.draw();
+
+        if (askToExit) {
+            spriteBatch.begin();
+            for (GameObject2D o : askToExitObjects) spriteBatch.draw(o);
+            spriteBatch.draw(acceptExitButton);
+            spriteBatch.draw(declineExitButton);
+            spriteBatch.end();
+            askToExitStage.act();
+            askToExitStage.draw();
+        }
     }
 
     @Override

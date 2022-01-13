@@ -39,6 +39,8 @@ public class GameSuper extends Game {
 
         System.setProperty("java.net.preferIPv6Addresses", "true");
 
+        Gdx.input.setCatchBackKey(true);
+
         mainFontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("Product Sans Regular.ttf"));
         DataManagement.loadData();
         palette = palettes[DataManagement.data.colorSchemeIndex];
