@@ -27,7 +27,7 @@ public class PlayScreen implements Screen {
         this.isAdmin = isAdmin;
     }
 
-    static final int STATE_PLAYING = 0, STATE_INFO = 1;
+    static final int STATE_PLAYING = 0, STATE_INFO = 1, STATE_WATCHING = 3;
     int state = STATE_PLAYING;
 
     int previousRoomStatus = Networking.Room.STATUS_IDLE;
@@ -61,6 +61,13 @@ public class PlayScreen implements Screen {
 
     float fadeOutAnimationProgress = 1;
     Screen nextScreen = null;
+
+    ArrayList<GameObject2D> watchingStateObjects = new ArrayList<>();
+    Stage watchingStateStage = new Stage();
+    GameObject2D watchingStateBackButton, WatchingStateNextPiecesBG, watchingStateHoldBG;
+    Pixmap watchingStateFieldBG;
+    int watchingID = 0;
+    Label watchingStatePlayerNameLabel, watchingStateScoreLabel;
 
     @Override
     public void show() {
@@ -312,6 +319,54 @@ public class PlayScreen implements Screen {
             batch[2] = new GameObject2D(divider, margin, unitHeight * (9 - i) - divider.getHeight() / 2f);
             playerInfoCosmeticElements.add(batch);
         }
+
+        // Creating a watching scene
+        pixmap = Drawing.createRoundedRectangle(screenWidth - 2 * margin, screenHeight / 10, screenHeight / 10 / 2, GameSuper.palette.onSecondary);
+        pixmap.drawPixmap(Drawing.getIcon("left.png", pixmap.getHeight(), pixmap.getHeight(), GameSuper.palette.secondary), 0, 0);
+        watchingStateBackButton = new GameObject2D(pixmap, margin, margin);
+        pixmap.dispose();
+
+        parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
+        parameter.color = GameSuper.palette.secondary;
+        parameter.size = Math.min(watchingStateBackButton.getHeight() - 2 * margin,
+                (watchingStateBackButton.getWidth() - 2 * watchingStateBackButton.getHeight()) / 10);
+
+        font = GameSuper.mainFontGenerator.generateFont(parameter);
+
+        watchingStatePlayerNameLabel = new Label("John Doe", new Label.LabelStyle(font, Color.WHITE));
+        watchingStatePlayerNameLabel.setSize(watchingStateBackButton.getWidth() - 2 * watchingStateBackButton.getHeight(),
+                watchingStateBackButton.getHeight());
+        watchingStatePlayerNameLabel.setAlignment(Align.center);
+        watchingStatePlayerNameLabel.setPosition(watchingStateBackButton.getHeight() + margin, margin);
+        watchingStateStage.addActor(watchingStatePlayerNameLabel);
+
+        pixmap = new Pixmap(screenWidth, screenHeight / 10 * 9 - 3 * margin, Pixmap.Format.RGB888);
+        pixmap.setColor(GameSuper.palette.primary);
+        pixmap.fill();
+        watchingStateObjects.add(new GameObject2D(pixmap, 0, screenHeight / 10f + margin * 2));
+
+        cellDimension = Math.min((pixmap.getWidth() - 2 * margin) / Tetris.fieldWidth,
+                (pixmap.getHeight() - 2 * margin - (int)font.getLineHeight()) / Tetris.fieldHeight);
+        watchingStateFieldBG = new Pixmap(cellDimension * Tetris.fieldWidth, cellDimension * Tetris.fieldHeight, Pixmap.Format.RGB888);
+        watchingStateFieldBG.setColor(Color.BLACK);
+        watchingStateFieldBG.fill();
+        watchingStateFieldBG.setColor(GameSuper.palette.secondary);
+        for (int fx = 0; fx < Tetris.fieldWidth; fx++) {
+            for (int fy = 0; fy < Tetris.fieldHeight; fy++) {
+                watchingStateFieldBG.drawRectangle(fx * cellDimension, fy * cellDimension, cellDimension, cellDimension);
+            }
+        }
+        pixmap.dispose();
+
+        parameter.size = 2 * margin;
+
+        font = GameSuper.mainFontGenerator.generateFont(parameter);
+
+        watchingStateScoreLabel = new Label("score label", new Label.LabelStyle(font, Color.WHITE));
+        watchingStateScoreLabel.setPosition(0, screenHeight / 10f + margin + margin + margin, Align.bottomLeft);
+        watchingStateScoreLabel.setSize(screenWidth, 2 * margin);
+        watchingStateScoreLabel.setAlignment(Align.top);
+        watchingStateStage.addActor(watchingStateScoreLabel);
     }
 
     private String getNumberWithSuffix(int number){
@@ -334,7 +389,7 @@ public class PlayScreen implements Screen {
 
         if (!NetworkingManager.client.isConnected()) GameSuper.instance.setScreen(new MenuScreen());
 
-        scoreLabel.setText("SCORE: " + NetworkingManager.playerInfo.score + " | TARGET: " + NetworkingManager.playerInfo.targetID + " | STACK: " + NetworkingManager.playerInfo.stackToAdd);
+        scoreLabel.setText("SCORE: " + NetworkingManager.playerInfo.score);
 
         startGameButton.setActive(NetworkingManager.clientSideRoom.status == Networking.Room.STATUS_IDLE && isAdmin);
         startGameLabel.setVisible(startGameButton.isActive());
@@ -378,6 +433,7 @@ public class PlayScreen implements Screen {
         if (Gdx.input.isKeyJustPressed(Input.Keys.BACK)) {
             if (state == STATE_PLAYING) state = STATE_INFO;
             else if (state == STATE_INFO) state = STATE_PLAYING;
+            else if (state == STATE_WATCHING) state = STATE_INFO;
         }
 
         if (Gdx.input.justTouched()){
@@ -404,6 +460,20 @@ public class PlayScreen implements Screen {
                         NetworkingManager.server.close();
                     }
                     nextScreen = new MenuScreen();
+                }
+                else {
+                    for (int i = 0; i < NetworkingManager.clientSideRoom.players.size(); i++) {
+                        if (playerInfoCosmeticElements.get(i)[1].contains()) {
+                            watchingID = NetworkingManager.clientSideRoom.players.get(i).id;
+                            state = STATE_WATCHING;
+                        }
+                    }
+                }
+            }
+            else if (state == STATE_WATCHING) {
+                if (watchingStateBackButton.contains()) {
+                    state = STATE_INFO;
+                    watchingID = -1;
                 }
             }
         }
@@ -502,7 +572,7 @@ public class PlayScreen implements Screen {
             Pixmap pixmap = new Pixmap(20, field.getHeight(), Pixmap.Format.RGB888);
             pixmap.setColor(Color.BLACK);
             pixmap.fill();
-            pixmap.setColor(GameSuper.palette.onPrimary);
+            pixmap.setColor(GameSuper.palette.secondary);
             pixmap.drawRectangle(0, 0, pixmap.getWidth(), pixmap.getHeight());
             int s = 0;
             if (NetworkingManager.playerInfo.targetID != -1) {
@@ -552,7 +622,8 @@ public class PlayScreen implements Screen {
                         if (nextFigure[fy][fx] == 1) pixmap.fillRectangle(margin * 2 + fx * cellSize, margin * 2 + fy * cellSize, cellSize, cellSize);
                     }
                 }
-                GameObject2D o = new GameObject2D(pixmap, nextPieceBG.getX() + nextPieceBG.getWidth() / 2f, nextPieceBG.getY() + nextPieceBG.getHeight() - i * slotWidth);
+                GameObject2D o = new GameObject2D(pixmap, nextPieceBG.getX() + nextPieceBG.getWidth() / 2f,
+                        nextPieceBG.getY() + nextPieceBG.getHeight() - i * slotWidth);
                 spriteBatch.begin();
                 spriteBatch.draw(o);
                 spriteBatch.end();
@@ -598,6 +669,71 @@ public class PlayScreen implements Screen {
             infoStage.act();
             infoStage.draw();
         }
+        else if (state == STATE_WATCHING) {
+            Pixmap field = new Pixmap(watchingStateFieldBG.getWidth(), watchingStateFieldBG.getHeight(), Pixmap.Format.RGB888);
+            field.drawPixmap(watchingStateFieldBG, 0, 0);
+
+            Networking.PlayerContainer player = null;
+            for (int i = 0; i < NetworkingManager.clientSideRoom.players.size(); i++) {
+                if (NetworkingManager.clientSideRoom.players.get(i).id == watchingID) {
+                    player = NetworkingManager.clientSideRoom.players.get(i);
+                }
+            }
+            if (player != null) {
+                watchingStatePlayerNameLabel.setText(player.name);
+                watchingStateScoreLabel.setText("SCORE: " + player.score);
+                int cellDimension = field.getWidth() / Tetris.fieldWidth;
+                for (int x = 0; x < Tetris.fieldWidth; x ++) {
+                    for (int y = 0; y < Tetris.fieldHeight; y++) {
+                        if (player.field[y][x] != -1) {
+                            field.setColor(Tetris.figureColors[player.field[y][x]]);
+                            field.fillRectangle(x * cellDimension, y * cellDimension, cellDimension, cellDimension);
+                        }
+                    }
+                }
+                int[][] figure = Tetris.figures[player.figureID][player.figureRotation].clone();
+                field.setColor(Tetris.figureColors[player.figureID]);
+                for (int fx = 0; fx < figure[0].length; fx++) {
+                    for (int fy = 0; fy < figure.length; fy++) {
+                        if (figure[fy][fx] == 1) {
+                            field.fillRectangle(cellDimension * (player.figureX + fx), cellDimension * (player.figureY + fy),
+                                    cellDimension, cellDimension);
+                        }
+                    }
+                }
+            }
+            else state = STATE_INFO;
+
+            GameObject2D fieldObject = new GameObject2D(field, screenWidth / 2f - field.getWidth() / 2f,
+                    screenHeight - margin - watchingStateFieldBG.getHeight() - margin);
+
+            Pixmap pixmap = new Pixmap(20, field.getHeight(), Pixmap.Format.RGB888);
+            pixmap.setColor(Color.BLACK);
+            pixmap.fill();
+            pixmap.setColor(GameSuper.palette.secondary);
+            pixmap.drawRectangle(0, 0, pixmap.getWidth(), pixmap.getHeight());
+            if (player != null) {
+                for (Networking.PlayerContainer attacker : NetworkingManager.clientSideRoom.players) {
+                    if (attacker.targetID == player.id) {
+                        int cellDimension = pixmap.getHeight() / Tetris.fieldHeight;
+                        pixmap.fillRectangle(0, (Tetris.fieldHeight - attacker.stackToAdd) * cellDimension, 20, pixmap.getHeight());
+                    }
+                }
+            }
+            GameObject2D stack = new GameObject2D(pixmap, fieldObject.getX() - 20, fieldObject.getY());
+
+            spriteBatch.draw(watchingStateBackButton);
+            for (GameObject2D o : watchingStateObjects) spriteBatch.draw(o);
+            spriteBatch.draw(fieldObject);
+            spriteBatch.draw(stack);
+            spriteBatch.end();
+            watchingStateStage.act();
+            watchingStateStage.draw();
+
+            stack.dispose();
+            fieldObject.dispose();
+            field.dispose();
+        }
 
         if (NetworkingManager.playerInfo.canPlay) {
             timePassedFromTick += Gdx.graphics.getDeltaTime();
@@ -622,7 +758,7 @@ public class PlayScreen implements Screen {
                     break;
                 }
             }
-            for (int y = 0; y < Tetris.fieldHeight - obtainedStack - 1; y++) {
+            for (int y = 0; y < Tetris.fieldHeight - obtainedStack; y++) {
                 NetworkingManager.playerInfo.field[y] = NetworkingManager.playerInfo.field[y + 1].clone();
             }
             int emptyColumn = new Random().nextInt(Tetris.fieldWidth);
