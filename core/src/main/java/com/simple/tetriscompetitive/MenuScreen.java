@@ -33,11 +33,8 @@ public class MenuScreen implements Screen {
 
     ArrayList<GameObject2D> askToExitObjects = new ArrayList<>();
     GameObject2D acceptExitButton, declineExitButton;
-    Label askExitLabel;
+    Label acceptExitLabel, declineExitLabel, askExitLabel;
     Stage askToExitStage = new Stage();
-
-    float fadeOutAnimationProgress = 1;
-    Screen nextScreen = null;
 
     @Override
     public void show() {
@@ -69,8 +66,8 @@ public class MenuScreen implements Screen {
         Pixmap userPic = new Pixmap((int) (340 * ratioWidth) + 20, (int) (340 * ratioWidth) + 20, Pixmap.Format.RGBA8888);
         userPic.setColor(GameSuper.palette.onSecondary);
         userPic.fillCircle(userPic.getHeight() / 2, userPic.getHeight() / 2, userPic.getHeight() / 2);
-        userPic.drawPixmap(Drawing.getIcon("profile-pic.png", userPic.getWidth() - 20,
-                userPic.getHeight() - 20, GameSuper.palette.secondary), 10, 10);
+        userPic.drawPixmap(new Pixmap(Gdx.files.internal("profile-pic.png")),
+                0, 0, 1000, 1000, 10, 10, userPic.getHeight() - 20, userPic.getHeight() - 20);
         objects.add(new GameObject2D(userPic, (screenWidth - userPic.getWidth()) / 2f, screenHeight - 100 - userPic.getHeight()));
 
         w = screenWidth - 200;
@@ -81,7 +78,7 @@ public class MenuScreen implements Screen {
         objects.add(new GameObject2D(pixmap, 100, screenHeight - h - 100 - userPic.getHeight() - 20));
         GameObject2D playerNameBG = objects.get(objects.size() - 1);
         pixmap = new Pixmap(h, h, Pixmap.Format.RGBA8888);
-        pixmap.drawPixmap(Drawing.getIcon("brush.png", h / 3 * 2, h / 3 * 2, GameSuper.palette.secondary), h / 6, h / 6);
+        pixmap.drawPixmap(new Pixmap(Gdx.files.internal("brush.png")), 0, 0, 1000, 1000, h / 6, h / 6, h / 3 * 2, h / 3 * 2);
         objects.add(new GameObject2D(pixmap, playerNameBG.getX() + playerNameBG.getWidth(), playerNameBG.getY()));
         settingsButton = objects.get(objects.size() - 1);
         pixmap.dispose();
@@ -232,8 +229,6 @@ public class MenuScreen implements Screen {
                 GameSuper.palette.secondary), (pixmap.getWidth() - pixmap.getHeight() * 2 / 3) / 2, pixmap.getHeight() / 3 / 2);
         declineExitButton = new GameObject2D(pixmap, margin * 1.5f + pixmap.getWidth(), screenHeight / 3f + margin / 2f);
         pixmap.dispose();
-
-        fadeOutAnimationProgress = -1;
     }
 
     @Override
@@ -262,15 +257,15 @@ public class MenuScreen implements Screen {
 
                 if (connectButton.contains() && !remoteHostNameTextField.getText().equals("")) {
                     if (NetworkingManager.startClient(remoteHostNameTextField.getText()))
-                        nextScreen = new PlayScreen(false);
+                        GameSuper.instance.setScreen(new PlayScreen(false));
                 }
 
                 if (hostButton.contains()) {
                     if (NetworkingManager.startHost(roomNameTextField.getText()))
-                        nextScreen = new PlayScreen(true);
+                        GameSuper.instance.setScreen(new PlayScreen(true));
                 }
 
-                if (settingsButton.contains()) nextScreen = new SettingsScreen();
+                if (settingsButton.contains()) GameSuper.instance.setScreen(new SettingsScreen());
             }
             else {
                 if (acceptExitButton.contains()) Gdx.app.exit();
@@ -302,33 +297,6 @@ public class MenuScreen implements Screen {
             askToExitStage.act();
             askToExitStage.draw();
         }
-
-        if (nextScreen != null) {
-            fadeOutAnimationProgress += 1 / 15f;
-            if (fadeOutAnimationProgress >= 1.5) {
-                GameSuper.instance.setScreen(nextScreen);
-            }
-        }
-        else if (fadeOutAnimationProgress > 0) {
-            fadeOutAnimationProgress -= 1 / 15f;
-            if (fadeOutAnimationProgress < 0) fadeOutAnimationProgress = 0;
-        }
-
-        Pixmap pad = new Pixmap(screenWidth, screenHeight, Pixmap.Format.RGBA8888);
-        Color color = new Color(GameSuper.palette.secondary);
-        float alpha = fadeOutAnimationProgress;
-        if (alpha > 1) alpha = 1;
-        color.a = alpha;
-        pad.setColor(color);
-        pad.fill();
-        spriteBatch.begin();
-        GameObject2D padObject = new GameObject2D(pad, 0, 0);
-        spriteBatch.draw(padObject);
-        spriteBatch.end();
-        pad.dispose();
-        padObject.dispose();
-
-        if (fadeOutAnimationProgress == -1) fadeOutAnimationProgress = 1;
     }
 
     @Override
