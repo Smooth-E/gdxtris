@@ -358,12 +358,12 @@ public class PlayScreen implements Screen {
         }
         pixmap.dispose();
 
-        parameter.size = 2 * margin;
+        parameter.size = 4 * margin;
 
         font = GameSuper.mainFontGenerator.generateFont(parameter);
 
         watchingStateScoreLabel = new Label("score label", new Label.LabelStyle(font, Color.WHITE));
-        watchingStateScoreLabel.setPosition(0, screenHeight / 10f + margin + margin + margin, Align.bottomLeft);
+        watchingStateScoreLabel.setPosition(0, screenHeight / 10f + margin + margin + margin + margin * 2, Align.bottomLeft);
         watchingStateScoreLabel.setSize(screenWidth, 2 * margin);
         watchingStateScoreLabel.setAlignment(Align.top);
         watchingStateStage.addActor(watchingStateScoreLabel);
@@ -415,8 +415,8 @@ public class PlayScreen implements Screen {
                 statsLabel.setVisible(!NetworkingManager.playerInfo.canPlay);
                 break;
             case Networking.Room.STATUS_IDLE:
-                startGameLabel.setVisible(isAdmin);
-                startGameButton.setActive(isAdmin);
+                startGameLabel.setVisible(isAdmin && NetworkingManager.clientSideRoom.players.size() > 1);
+                startGameButton.setActive(startGameLabel.isVisible());
                 gameStatusOverlay.setActive(true);
                 statsLabel.setVisible(true);
                 break;
@@ -775,14 +775,16 @@ public class PlayScreen implements Screen {
         NetworkingManager.client.sendTCP(new Networking.UpdatedGameStateRequest());
 
         // Transition animation
+        float newDelta = delta;
+        if (newDelta > 1 / 60f) newDelta = 1 / 60f;
         if (nextScreen != null) {
-            fadeOutAnimationProgress += 1 / 5f;
+            fadeOutAnimationProgress += 4 * newDelta;
             if (fadeOutAnimationProgress >= 1.5) {
                 GameSuper.instance.setScreen(nextScreen);
             }
         }
         else if (fadeOutAnimationProgress > 0) {
-            fadeOutAnimationProgress -= 1 / 5f;
+            fadeOutAnimationProgress -= 4 * newDelta;
             if (fadeOutAnimationProgress < 0) fadeOutAnimationProgress = 0;
         }
 

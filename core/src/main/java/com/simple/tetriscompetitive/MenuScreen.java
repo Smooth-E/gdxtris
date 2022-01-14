@@ -303,14 +303,16 @@ public class MenuScreen implements Screen {
             askToExitStage.draw();
         }
 
+        float newDelta = delta;
+        if (newDelta > 1 / 60f) newDelta = 1 / 60f;
         if (nextScreen != null) {
-            fadeOutAnimationProgress += 1 / 5f;
+            fadeOutAnimationProgress += 4 * newDelta;
             if (fadeOutAnimationProgress >= 1.5) {
                 GameSuper.instance.setScreen(nextScreen);
             }
         }
         else if (fadeOutAnimationProgress > 0) {
-            fadeOutAnimationProgress -= 1 / 5f;
+            fadeOutAnimationProgress -= 4 * newDelta;
             if (fadeOutAnimationProgress < 0) fadeOutAnimationProgress = 0;
         }
 
