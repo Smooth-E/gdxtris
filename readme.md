@@ -1,7 +1,7 @@
 # GdxTris
 ## What is GdxTris
 GdxTris is a game made according to the Tetris [Guidlines](https://tetris.wiki/Tetris_Guideline) and inspired by [JSTris](https://jstris.jezevec10.com/). It is a game where you compete with other players, cinnected to the same local network.
-## How do I play&
+## How to play
 In order to play, you and your opponents have to connect to the same local network (network doesnt need to have an internet acces ^.^).
 
 Next up, one of the players should tap on HOST in game's main menu. They will create a room on their device. Then they have to tap on the question mark button, here they can see their local ip address, which they have to provide to other players in order for them to connect.
