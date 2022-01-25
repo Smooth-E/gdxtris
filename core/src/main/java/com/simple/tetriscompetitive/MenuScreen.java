@@ -140,7 +140,7 @@ public class MenuScreen implements Screen {
         bigTextFieldStyle.fontColor = Color.WHITE;
         bigTextFieldStyle.messageFontColor = Color.WHITE;
 
-        remoteHostNameTextField = new TextField("192.168.0.193", bigTextFieldStyle);
+        remoteHostNameTextField = new TextField("", bigTextFieldStyle);
         remoteHostNameTextField.setMessageText("ROOM IP");
         remoteHostNameTextField.setAlignment(Align.center);
         remoteHostNameTextField.setPosition(connectButton.getX(), connectButton.getY() + connectButton.getHeight() + 10, Align.bottomLeft);
