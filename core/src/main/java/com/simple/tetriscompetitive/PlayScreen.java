@@ -183,10 +183,17 @@ public class PlayScreen implements Screen {
 
         w = Math.min(playFieldHeight - 2 * margin - holdBG.getHeight() - nextPieceBG.getHeight() - margin,
                 screenWidth - playFieldWidth - (int)x - margin * 4);
+
+        /*
+        android 9+ (api 28) 
         pixmap = new Pixmap(w, w, Pixmap.Format.RGBA8888);
         pixmap.setColor(GameSuper.palette.primary);
         pixmap.fillCircle(pixmap.getWidth() / 2, pixmap.getHeight() / 2, w / 2);
         pixmap.drawPixmap(Drawing.getIcon("help.png", w, w, GameSuper.palette.secondary), 0, 0);
+        */
+        pixmap = new Pixmap(h, h, Pixmap.Format.RGBA8888);
+        pixmap.drawPixmap(circle, 0, 0);
+        pixmap.drawPixmap(Drawing.getIcon("help.png", h, h, GameSuper.palette.secondary), 0, 0);
         playSateObjects.add(new GameObject2D(pixmap, holdBG.getX() + holdBG.getWidth() / 2f + margin * 2, y));
         playStateInfoButton = playSateObjects.get(playSateObjects.size() - 1);
 
