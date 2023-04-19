@@ -16,7 +16,7 @@ import java.util.ArrayList;
 public class LoadingScreen implements Screen {
 
     private final GameObject2D.MySpriteBatch spriteBatch = new GameObject2D.MySpriteBatch();
-    private final ArrayList<GameObject2D> objects = new ArrayList<>();
+    private final ArrayList<GameObject2D> widgets = new ArrayList<>();
     private final Stage stage = new Stage();
     private boolean assetsLoaded = false;
     private GameObject2D bouncingIndicator;
@@ -34,11 +34,11 @@ public class LoadingScreen implements Screen {
         FreeTypeFontGenerator.FreeTypeFontParameter parameter =
                 new FreeTypeFontGenerator.FreeTypeFontParameter();
         parameter.color = GameSuper.palette.secondary;
-        parameter.size = (screenWidth) / loadingLabelMessage.length();
+        parameter.size = screenWidth / loadingLabelMessage.length();
         BitmapFont font = GameSuper.mainFontGenerator.generateFont(parameter);
 
         int loadingBoxWidth = screenWidth - 200 + 40;
-        int loadingBoxHeight = (int)font.getLineHeight() + 100;
+        int loadingBoxHeight = (int) font.getLineHeight() + 100;
         float loadingBoxX = (screenWidth - loadingBoxWidth) / 2f;
         float loadingBoxY = 50;
 
@@ -51,7 +51,7 @@ public class LoadingScreen implements Screen {
             cornerRadius,
             GameSuper.palette.onSecondary
         );
-        objects.add(new GameObject2D(loadingBoxPixmap, loadingBoxX, loadingBoxY));
+        widgets.add(new GameObject2D(loadingBoxPixmap, loadingBoxX, loadingBoxY));
         loadingBoxPixmap.dispose();
 
         Label.LabelStyle loadingLabelStyle = new Label.LabelStyle(font, Color.WHITE);
@@ -93,7 +93,7 @@ public class LoadingScreen implements Screen {
         spriteBatch.begin();
         spriteBatch.draw(bouncingIndicator);
 
-        for (GameObject2D gameObject : objects)
+        for (GameObject2D gameObject : widgets)
             spriteBatch.draw(gameObject);
 
         spriteBatch.end();
