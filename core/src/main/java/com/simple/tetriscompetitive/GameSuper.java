@@ -2,6 +2,8 @@ package com.simple.tetriscompetitive;
 
 import com.badlogic.gdx.Game;
 import com.badlogic.gdx.Gdx;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 
@@ -31,9 +33,6 @@ public class GameSuper extends Game {
 
     public static GameSuper instance;
 
-    public MenuScreen menuScreen;
-    public PlayScreen playScreen;
-    public SettingsScreen settingsScreen;
     public LoadingScreen loadingScreen;
 
     @Override
@@ -42,12 +41,17 @@ public class GameSuper extends Game {
 
         System.setProperty("java.net.preferIPv6Addresses", "true");
 
-        Gdx.input.setCatchBackKey(true);
+        Gdx.input.setCatchKey(Input.Keys.BACK, true);
 
-        mainFontGenerator = new FreeTypeFontGenerator(Gdx.files.internal("Product Sans Regular.ttf"));
+        FileHandle fontFile = Gdx.files.internal("Product Sans Regular.ttf");
+        mainFontGenerator = new FreeTypeFontGenerator(fontFile);
+
         DataManagement.loadData();
+
         palette = palettes[DataManagement.data.colorSchemeIndex];
+
         loadingScreen = new LoadingScreen();
         setScreen(loadingScreen);
+
     }
 }

@@ -52,7 +52,12 @@ public class GameObject2D extends Texture {
 
 
     public boolean contains(float x, float y){
-        return this.isActive && x >= position.x && x <= position.x + getWidth() && y >= position.y && y <= position.y + getHeight();
+        return
+            this.isActive && x >= position.x &&
+            x <= position.x + getWidth() &&
+            y >= position.y &&
+            y <= position.y + getHeight()
+        ;
     }
 
     public boolean contains(Vector2 position){
@@ -69,16 +74,18 @@ public class GameObject2D extends Texture {
 
 
     public static class MySpriteBatch extends SpriteBatch {
+
         public void draw(GameObject2D object){
-            if(object.isActive()) this.draw(object, object.getX(), object.getY());
+            if(object.isActive())
+                this.draw(object, object.getX(), object.getY());
         }
+
     }
 
-
-
-    //Constructors
+    // Constructors
     public GameObject2D(Pixmap pixmap, float x, float y){
         super(pixmap);
+
         position = new Vector2(x, y);
         origin = new Vector2(x, y);;
     }
@@ -132,9 +139,17 @@ public class GameObject2D extends Texture {
     }
 
     public static boolean checkContains(Widget widget) {
-        int x = Gdx.input.getX(), y = Gdx.graphics.getHeight() - Gdx.input.getY();
-        float wx = widget.getX(Align.bottomLeft), wy = widget.getY(Align.bottomLeft);
-        return x >= wx && x <= wx + widget.getWidth() && y >= wy && y <= wy + widget.getHeight();
+        int inputX = Gdx.input.getX();
+        int inputY = Gdx.graphics.getHeight() - Gdx.input.getY();
+        float widgetX = widget.getX(Align.bottomLeft);
+        float widgetY = widget.getY(Align.bottomLeft);
+
+        return
+            inputX >= widgetX &&
+            inputX <= widgetX + widget.getWidth() &&
+            inputY >= widgetY &&
+            inputY <= widgetY + widget.getHeight()
+        ;
     }
 
     public boolean contains(){

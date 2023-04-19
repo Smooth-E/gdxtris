@@ -1,4 +1,5 @@
 buildscript {
+
 	repositories {
 		mavenLocal()
 		mavenCentral()
@@ -6,9 +7,11 @@ buildscript {
 		maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
 		jcenter()
 	}
+
 	dependencies {
-		classpath "com.android.tools.build:gradle:$androidPluginVersion"
+		classpath "com.android.tools.build:gradle:8.0.0"
 	}
+
 }
 
 allprojects {
@@ -19,14 +22,18 @@ allprojects {
 configure(subprojects - project(':android')) {
 	apply plugin: 'java-library'
 	sourceCompatibility = 8.0
+
 	compileJava {
 		options.incremental = true
 	}
+
 }
 
 subprojects {
+
 	version = '0.0.1-SNAPSHOT'
 	ext.appName = 'TetrisCompetitive'
+
 	repositories {
 		mavenLocal()
 		mavenCentral()
@@ -34,6 +41,7 @@ subprojects {
 		maven { url 'https://jitpack.io' }
 		jcenter()
 	}
+
 }
 
 eclipse.project.name = 'TetrisCompetitive' + '-parent'

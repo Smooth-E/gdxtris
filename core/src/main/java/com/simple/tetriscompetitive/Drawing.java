@@ -6,11 +6,18 @@ import com.badlogic.gdx.graphics.Pixmap;
 
 public class Drawing {
 
-    //Stolen from old project =)
-    public static Pixmap createRoundedRectangle(int width, int height, int cornerRadius, Color color) {
+    public static final int CORNER_RADIUS = 50;
 
+    // Stolen from an old project =)
+    public static Pixmap createRoundedRectangle(
+        int width,
+        int height,
+        int cornerRadius,
+        Color color
+    ) {
+        // TODO: Investigate, what the returnable Pixmap is used for
         Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
-        Pixmap ret = new Pixmap(width, height, Pixmap.Format.RGBA8888);
+        Pixmap returnable = new Pixmap(width, height, Pixmap.Format.RGBA8888);
 
         pixmap.setColor(color);
 
@@ -22,33 +29,46 @@ public class Drawing {
         pixmap.fillRectangle(cornerRadius, 0, width - cornerRadius * 2, height);
         pixmap.fillRectangle(0, cornerRadius, width, height - cornerRadius * 2);
 
-        ret.setColor(color);
+        returnable.setColor(color);
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                if (pixmap.getPixel(x, y) != 0) ret.drawPixel(x, y);
+                if (pixmap.getPixel(x, y) != 0)
+                    returnable.drawPixel(x, y);
             }
         }
+
         pixmap.dispose();
 
-        return ret;
+        return returnable;
     }
-
-    public static final float shadowSize = 0.03f;
-    public static final int cornerRadius = 50;
 
     public static Pixmap createButtonPixmap(int width, int height, int shadowX, int shadowY) {
         Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
         int segmentHeight = height - shadowX, segmentWidth = width - shadowY;
-        Pixmap background = createRoundedRectangle(segmentWidth, segmentHeight, cornerRadius,
-                GameSuper.palettes[DataManagement.data.colorSchemeIndex].onSecondary);
-        Pixmap foreground = createRoundedRectangle(segmentWidth, segmentHeight, cornerRadius,
-                GameSuper.palettes[DataManagement.data.colorSchemeIndex].primary);
+        int colorSchemeIndex = DataManagement.data.colorSchemeIndex;
+        GameSuper.Palette palette = GameSuper.palettes[colorSchemeIndex];
+
+        Pixmap backgroundPixmap = createRoundedRectangle(
+            segmentWidth,
+            segmentHeight,
+            CORNER_RADIUS,
+            palette.onSecondary
+        );
+
+        Pixmap foreground = createRoundedRectangle(
+            segmentWidth,
+            segmentHeight,
+            CORNER_RADIUS,
+            palette.primary
+        );
+
         for(int x = 0; x < segmentWidth; x++) {
             for(int y = 0; y < segmentHeight; y++){
-                pixmap.drawPixel(x, y, background.getPixel(x, y));
+                pixmap.drawPixel(x, y, backgroundPixmap.getPixel(x, y));
                 pixmap.drawPixel(x + shadowX, y + shadowX, foreground.getPixel(x, y));
             }
         }
+
         return pixmap;
     }
 
@@ -56,23 +76,52 @@ public class Drawing {
         return createButtonPixmap(width, height, shadowXY, shadowXY);
     }
 
-    public static Pixmap createButtonPixmap(int width, int height, float shadowPercentX, float shadowPercentY){
-        return createButtonPixmap(width, height, width * shadowPercentX, height * shadowPercentY);
+    public static Pixmap createButtonPixmap(
+        int width, int height,
+        float shadowPercentX,
+        float shadowPercentY
+    ){
+        return createButtonPixmap(
+            width,
+            height,
+            width * shadowPercentX,
+            height * shadowPercentY
+        );
     }
 
     public static Pixmap createButtonPixmap(int width, int height, float shadowPercentXY){
-        return createButtonPixmap(width, height, width * shadowPercentXY, height * shadowPercentXY);
+        return createButtonPixmap(
+            width,
+            height,
+            width * shadowPercentXY,
+            height * shadowPercentXY
+        );
     }
 
     public static Pixmap getIcon(String path, int width, int height, Color color) {
-        Pixmap resized = new Pixmap(width, height, Pixmap.Format.RGBA8888);
-        resized.drawPixmap(new Pixmap(Gdx.files.internal(path)), 0, 0, 1000, 1000, 0, 0, width, height);
-        resized.setColor(color);
+        Pixmap initialPixmap = new Pixmap(Gdx.files.internal(path));
+        Pixmap resizedPixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
+
+        resizedPixmap.drawPixmap(
+            initialPixmap,
+            0,
+            0,
+            initialPixmap.getWidth(),
+            initialPixmap.getHeight(),
+            0,
+            0,
+            width,
+            height
+        );
+
+        resizedPixmap.setColor(color);
         for (int x = 0; x < width; x++) {
             for (int y = 0; y < height; y++) {
-                if (resized.getPixel(x, y) != Color.CLEAR.toIntBits()) resized.drawPixel(x, y);
+                if (resizedPixmap.getPixel(x, y) != Color.CLEAR.toIntBits())
+                    resizedPixmap.drawPixel(x, y);
             }
         }
-        return resized;
+
+        return resizedPixmap;
     }
 }

@@ -12,40 +12,50 @@ import java.io.Serializable;
 public class DataManagement {
 
     public static class DataContainer implements Serializable {
+
         public String nickname = "John Doe";
         public int colorSchemeIndex = 0;
+
     }
 
     public static DataContainer data = null;
-    static String savingPath = "competitive-tetris-save-file";
+    static final String SAVE_FILE_NAME = "competitive-tetris-save-file";
 
     public static void loadData() {
         try {
-            FileInputStream fileInputStream = new FileInputStream(Gdx.files.getLocalStoragePath() + "/" + savingPath);
+            String filePath = Gdx.files.getLocalStoragePath() + "/" + SAVE_FILE_NAME;
+            FileInputStream fileInputStream = new FileInputStream(filePath);
+
             ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
             data = (DataContainer) objectInputStream.readObject();
+
             objectInputStream.close();
             fileInputStream.close();
         }
-        catch (Exception e) {
-            Gdx.app.log(Constants.ERROR, "Failed to load data!\n" + e.toString());
+        catch (Exception exception) {
+            Gdx.app.log(Constants.ERROR, "Failed to load data!\n" + exception);
             data = new DataContainer();
         }
     }
 
     public static void saveData() {
-        if (data == null) data = new DataContainer();
+        if (data == null)
+            data = new DataContainer();
+
         try {
-            File saveFile = new File(Gdx.files.getLocalStoragePath() + "/" + savingPath);
+            String filePath = Gdx.files.getLocalStoragePath() + "/" + SAVE_FILE_NAME;
+            File saveFile = new File(filePath);
             saveFile.createNewFile();
+
             FileOutputStream fileOutputStream = new FileOutputStream(saveFile);
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(fileOutputStream);
             objectOutputStream.writeObject(data);
+
             objectOutputStream.close();
             fileOutputStream.close();
         }
-        catch (Exception e) {
-            Gdx.app.log(Constants.ERROR, "Failed to save data!\n" + e.toString());
+        catch (Exception exception) {
+            Gdx.app.log(Constants.ERROR, "Failed to save data!\n" + exception);
         }
     }
 }
