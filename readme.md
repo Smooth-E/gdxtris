@@ -1,6 +1,24 @@
-# GdxTris
+<div align="center">
+    <img alt="Banner" src="media/cover.png" width="98.5%">
+</div>
 
-## What is GdxTris
+<div align="center">
+    <img alt="Screenshot - Home Screen" src="media/01.png" width="32.5%"/>
+    <img alt="Screenshot - Gameplay" src="media/02.png" width="32.5%"/>
+    <img alt="Screenshot - Themes" src="media/03.png" width="32.5%"/>
+</div>
+
+<div align="center">
+    <a href="https://github.com/Smooth-E/gdxtris/releases/latest" target="_blank" rel="nofollow noopener">
+        <img alt="Badge GitHub" src="media/badge-github.png" width="40%"/>
+    </a>
+    <a href="https://smooth-e.itch.io/gdxtris" target="_blank" rel="nofollow noopener">
+        <img alt="Badge itch.io" src="media/badge-itch-io.png" width="40%"/>
+    </a>
+</div>
+
+> **Note**
+> The initial release of this project was on January 25, 2022. From that time the project had only seen minor improvements and fixes. However, as you can see from [these](https://github.com/Smooth-E/gdxtris/commits/project?since=2023-01-01) recent commits, I decided to start rewriting the project, improving code readability and switching to new and more appropriate concepts and technologies. To summarize it all up, I am not currently accepting new Pull Requests for this project, even tho further the development of it will probably be slow.
 
 GdxTris is a game made according to the Tetris [Guidelines](https://tetris.wiki/Tetris_Guideline) and inspired by [JSTris](https://jstris.jezevec10.com/). It is a game where you compete with other players, connected to the same local network.
 
@@ -21,5 +39,3 @@ Clear the lines to gain points. Scoring goes as it is described in [guidelines](
 1. Change app's color theme by tapping the brush icon in main menu.
 2. Change your username that will be shown to other players (from main menu also).
 3. Watch how other players perform during the session. In order to do so, tap onto question mark icon on the bottom right, then tap onto the eye icon next to the listed player, that you want to watch.
-
-[![Banner Image](https://media.discordapp.net/attachments/486869413732155404/935360789534081054/unknown.png)](https://smooth-e.itch.io/gdxtris)
