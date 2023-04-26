@@ -318,8 +318,6 @@ public class MenuScreen implements Screen {
 
         // Create text fields for IP address and room name
 
-        // TODO: Fields are now swapped places. Investigate and fix the issue
-
         FreeTypeFontGenerator.FreeTypeFontParameter actionTextFieldFreetypeParameter =
                 new FreeTypeFontGenerator.FreeTypeFontParameter();
 
@@ -381,7 +379,7 @@ public class MenuScreen implements Screen {
         remoteHostNameTextField = new TextField("", actionTextFieldStyle);
         remoteHostNameTextField.setMessageText(messageRoomIP);
         remoteHostNameTextField.setAlignment(Align.center);
-        remoteHostNameTextField.setPosition(actionX, topTextFieldY, Align.bottomLeft);
+        remoteHostNameTextField.setPosition(actionX, bottomTextFieldY, Align.bottomLeft);
         remoteHostNameTextField.setSize(actionWidth, actionHeight);
         remoteHostNameTextField.setOnscreenKeyboard(remoteHostNameKeyboard);
         stage.addActor(remoteHostNameTextField);
@@ -417,7 +415,7 @@ public class MenuScreen implements Screen {
 
         roomNameTextField = new TextField("", actionTextFieldStyle);
         roomNameTextField.setAlignment(Align.center);
-        roomNameTextField.setPosition(actionX, bottomTextFieldY, Align.bottomLeft);
+        roomNameTextField.setPosition(actionX, topTextFieldY, Align.bottomLeft);
         roomNameTextField.setSize(actionWidth, actionHeight);
         roomNameTextField.setMessageText(messageRoomName);
         roomNameTextField.setOnscreenKeyboard(roomNameKeyboard);
