@@ -11,373 +11,796 @@ import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.utils.Align;
-import com.sun.source.doctree.TextTree;
 
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.security.Key;
 import java.util.ArrayList;
 import java.util.Random;
 
 public class PlayScreen implements Screen {
 
-    public boolean isAdmin = false;
+    private final boolean isAdmin;
+
+    private static final int STATE_PLAYING = 0;
+    private static final int STATE_INFO = 1;
+    private static final int STATE_WATCHING = 3;
+
+    private int state = STATE_PLAYING;
+
+    private int previousRoomStatus = Networking.Room.STATUS_IDLE;
+
+    private float timePassedFromTick = 0;
+
+    private final GameObject2D.MySpriteBatch spriteBatch = new GameObject2D.MySpriteBatch();
+    private final Stage stage = new Stage();
+    private int screenHeight;
+    private int screenWidth;
+    private int margin;
+    private float ratioWidth;
+    private float ratioHeight;
+
+    private String networkAddress = "NO ADDRESS";
+
+    private final ArrayList<GameObject2D> playStateObjects = new ArrayList<>();
+    private GameObject2D infoButton;
+    private GameObject2D stepLeftButton;
+    private GameObject2D stepRightButton;
+    private GameObject2D stepDownButton;
+    private GameObject2D rotateClockwiseButton;
+    private GameObject2D rotateAntiClockwiseButton;
+    private GameObject2D rotate180Button;
+    private GameObject2D instantPlaceButton;
+    private GameObject2D exchangeButton;
+    private GameObject2D holdPieceBackground;
+    private GameObject2D nextPieceBackground;
+    private GameObject2D gameStatusOverlay;
+    private GameObject2D startGameButton;
+    private Pixmap playFieldPixmap;
+    private Label statsLabel;
+    private Label startGameLabel;
+    private Label scoreLabel;
+    private final Stage playStateStage = new Stage();
+
+    private final ArrayList<GameObject2D> infoStateObjects = new ArrayList<>();
+    private final ArrayList<Label> playerInfoLabels = new ArrayList<>(10);
+
+    private final ArrayList<GameObject2D[]> playerInfoCosmeticElements =
+            new ArrayList<>(10);
+
+    private GameObject2D backToPlayButton;
+    private GameObject2D exitGameButton;
+    private final Stage infoStage = new Stage();
+
+    private float fadeOutAnimationProgress = 1;
+    private Screen nextScreen = null;
+
+    private final ArrayList<GameObject2D> watchingStateObjects = new ArrayList<>();
+    private final Stage watchingStateStage = new Stage();
+    private GameObject2D watchingStateBackButton;
+    private Pixmap watchingStateFieldBackground;
+    private int watchingID = 0;
+    private Label watchingStatePlayerNameLabel;
+    private Label watchingStateScoreLabel;
 
     public PlayScreen(boolean isAdmin) {
         this.isAdmin = isAdmin;
     }
 
-    static final int STATE_PLAYING = 0, STATE_INFO = 1, STATE_WATCHING = 3;
-    int state = STATE_PLAYING;
+    private String getNumberWithSuffix(int number) {
+        switch (number % 10) {
+            case 1:
+                return number + "st";
+            case 2:
+                return number + "nd";
+            default:
+                return number + "th";
+        }
+    }
 
-    int previousRoomStatus = Networking.Room.STATUS_IDLE;
+    private void checkInternetConnection() {
 
-    float timePassedFromTick = 0;
+        // TODO: Do something if connection is unreachable
 
-    GameObject2D.MySpriteBatch spriteBatch = new GameObject2D.MySpriteBatch();
-    Stage stage = new Stage();
-    int screenHeight, screenWidth, margin;
-    float ratioWidth, ratioHeight;
+        final String loggingTag = "CONN_CHECK";
 
-    String networkAddress = "NO ADDRESS";
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress("google.com", 80));
+            Gdx.app.log(loggingTag, "Hosted / connected: " + socket.getLocalAddress());
+            networkAddress = socket.getLocalAddress().toString();
+        }
+        catch (Exception exception) {
+            Gdx.app.log(loggingTag, "Unable to get host name / address: ");
+            exception.printStackTrace();
+        }
+    }
 
-    ArrayList<GameObject2D> playSateObjects = new ArrayList<>();
-    GameObject2D playStateInfoButton, playSatePlayersButton, playStateOverviewButton;
-    GameObject2D stepLeftButton, stepRightButton, stepDownButton, rotateClockwiseButton, rotateAntiClockwiseButton, rotate180Button;
-    GameObject2D instantPlaceButton, exchangeButton;
-    GameObject2D playField;
-    GameObject2D holdBG, nextPieceBG;
-    GameObject2D gameStatusOverlay, startGameButton;
-    Pixmap playFieldPixmap;
-    Label statsLabel, startGameLabel, scoreLabel;
-    Stage playStateStage = new Stage();
+    private GameObject2D createControllerButton(
+            Pixmap basePixmap,
+            float x,
+            float y,
+            String iconFileName
+    ) {
+        int width = basePixmap.getWidth();
+        int height = basePixmap.getHeight();
 
-    ArrayList<GameObject2D> infoStateObjects = new ArrayList<>();
-    ArrayList<Label> playerInfoLabels = new ArrayList<>(10);
-    ArrayList<GameObject2D[]> playerInfoCosmeticElements = new ArrayList<GameObject2D[]>(10);
-    Label headerLabel;
-    GameObject2D backToPlayButton, exitGameButton;
-    Stage infoStage = new Stage();
+        Pixmap icon = Drawing.getIcon(iconFileName, width, height, GameSuper.palette.secondary);
 
-    float fadeOutAnimationProgress = 1;
-    Screen nextScreen = null;
+        Pixmap pixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
+        pixmap.drawPixmap(basePixmap, 0, 0);
+        pixmap.drawPixmap(icon, 0, 0);
 
-    ArrayList<GameObject2D> watchingStateObjects = new ArrayList<>();
-    Stage watchingStateStage = new Stage();
-    GameObject2D watchingStateBackButton, WatchingStateNextPiecesBG, watchingStateHoldBG;
-    Pixmap watchingStateFieldBG;
-    int watchingID = 0;
-    Label watchingStatePlayerNameLabel, watchingStateScoreLabel;
+        GameObject2D gameObject = new GameObject2D(pixmap, x, y);
+
+        icon.dispose();
+        pixmap.dispose();
+
+        return gameObject;
+    }
+
+    // TODO: Separate different-purpose scenes into different screens
+
+    private void initializePlayScene() {
+
+        // Create a background for all the controls
+
+        int controlsBackgroundWidth = (int) (980 * ratioWidth);
+        int controlsBackgroundHeight = (int) (172 * ratioWidth) * 2 + margin * 3;
+
+        Pixmap controlsBackgroundPixmap = Drawing.createRoundedRectangle(
+                controlsBackgroundWidth,
+                controlsBackgroundHeight,
+                (int) (172 * ratioHeight) / 2,
+                GameSuper.palette.primary
+        );
+
+        float controlsBackgroundX = (screenWidth - controlsBackgroundWidth) / 2f;
+        float controlsBackgroundY = 50 * ratioHeight;
+
+        playStateObjects.add(new GameObject2D(
+                controlsBackgroundPixmap,
+                controlsBackgroundX,
+                controlsBackgroundY
+        ));
+
+        controlsBackgroundPixmap.dispose();
+
+        // Create a circle pixmap for controller buttons
+
+        int controlButtonDimension = (int) (172 * ratioWidth);
+        int controlButtonRadius = controlButtonDimension / 2;
+
+        Pixmap controlButtonCirclePixmap = new Pixmap(
+                controlButtonDimension,
+                controlButtonDimension,
+                Pixmap.Format.RGBA8888
+        );
+
+        controlButtonCirclePixmap.setColor(GameSuper.palette.onSecondary);
+        controlButtonCirclePixmap
+                .fillCircle(controlButtonRadius, controlButtonRadius, controlButtonRadius);
+
+        // Create controller buttons
+
+        float buttonRowY = 50 * ratioHeight + margin;
+        float controllerPanelCenter =  (screenWidth - controlsBackgroundWidth) / 2f;
+        float mostLeftButtonX = controllerPanelCenter + margin;
+        float perButtonOffset = controlButtonDimension + margin;
+
+        stepLeftButton = createControllerButton(
+                controlButtonCirclePixmap,
+                mostLeftButtonX,
+                buttonRowY,
+                "left.png"
+        );
+        playStateObjects.add(stepLeftButton);
+
+        stepRightButton = createControllerButton(
+                controlButtonCirclePixmap,
+                mostLeftButtonX + perButtonOffset,
+                buttonRowY,
+                "right.png"
+        );
+        playStateObjects.add(stepRightButton);
+
+        stepDownButton = createControllerButton(
+                controlButtonCirclePixmap,
+                mostLeftButtonX + perButtonOffset * 2,
+                buttonRowY,
+                "down.png"
+        );
+        playStateObjects.add(stepDownButton);
+
+        rotateClockwiseButton = createControllerButton(
+                controlButtonCirclePixmap,
+                mostLeftButtonX + perButtonOffset * 3,
+                buttonRowY,
+                "clockwise.png"
+        );
+        playStateObjects.add(rotateClockwiseButton);
+
+        rotateAntiClockwiseButton = createControllerButton(
+                controlButtonCirclePixmap,
+                mostLeftButtonX + perButtonOffset * 4,
+                buttonRowY,
+                "anticlockwise.png"
+        );
+        playStateObjects.add(rotateAntiClockwiseButton);
+
+        buttonRowY += controlButtonDimension + margin;
+
+        rotate180Button = createControllerButton(
+                controlButtonCirclePixmap,
+                mostLeftButtonX + perButtonOffset * 2,
+                buttonRowY,
+                "rotate180.png"
+        );
+        playStateObjects.add(rotate180Button);
+
+        exchangeButton = createControllerButton(
+                controlButtonCirclePixmap,
+                mostLeftButtonX + perButtonOffset * 3,
+                buttonRowY,
+                "exchange.png"
+        );
+        playStateObjects.add(exchangeButton);
+
+        instantPlaceButton = createControllerButton(
+                controlButtonCirclePixmap,
+                mostLeftButtonX + perButtonOffset * 4,
+                buttonRowY,
+                "instant.png"
+        );
+        playStateObjects.add(instantPlaceButton);
+
+        controlButtonCirclePixmap.dispose();
+
+        int cellDimension = (int) (63.3 * ratioHeight);
+        int playFieldWidth = 10 * cellDimension;
+        int playFieldHeight = 20 * cellDimension;
+
+        // Create a playing field
+
+        playFieldPixmap = new Pixmap(playFieldWidth, playFieldHeight, Pixmap.Format.RGB888);
+
+        playFieldPixmap.setColor(Color.BLACK);
+        playFieldPixmap.fill();
+
+        playFieldPixmap.setColor(GameSuper.palette.secondary);
+        playFieldPixmap.drawRectangle(0, 0, playFieldWidth, playFieldHeight);
+
+        for (int x = 0; x < 10; x++) {
+            for (int y = 0; y < 20; y++) {
+                playFieldPixmap.drawRectangle(
+                        x * cellDimension,
+                        y * cellDimension,
+                        cellDimension,
+                        cellDimension
+                );
+            }
+        }
+
+        // Draw a plain rectangle to place on top of the screen
+
+        // TODO: Is this really needed?
+
+        int topRectangleHeight = playFieldHeight + (int) (100 * ratioHeight);
+        float topRectangleY = screenHeight - 50 * ratioHeight - topRectangleHeight;
+
+        Pixmap topRectanglePixmap  =
+                new Pixmap(screenWidth, topRectangleHeight, Pixmap.Format.RGB888);
+
+        topRectanglePixmap.setColor(GameSuper.palette.onSecondary);
+        topRectanglePixmap.fill();
+        playStateObjects.add(new GameObject2D(topRectanglePixmap, 0, topRectangleY));
+
+        float holdBackgroundX = 50;
+        int holdBackgroundDimension = screenWidth - (int) holdBackgroundX * 2 - playFieldWidth - 20;
+        int holdBackgroundCornerRadius = margin;
+        int holdBackgroundOutlineSize = 5;
+
+        Pixmap holdBackgroundPixmap = Drawing.createRoundedRectangle(
+                holdBackgroundDimension * 2,
+                holdBackgroundDimension,
+                holdBackgroundCornerRadius,
+                GameSuper.palette.secondary
+        );
+
+        Pixmap holdBackgroundInnerPartPixmap = Drawing.createRoundedRectangle(
+                holdBackgroundPixmap.getWidth() - holdBackgroundOutlineSize * 2,
+                holdBackgroundPixmap.getHeight() - holdBackgroundOutlineSize * 2,
+                holdBackgroundCornerRadius,
+                Color.BLACK
+        );
+
+        holdBackgroundPixmap.drawPixmap(
+                holdBackgroundInnerPartPixmap,
+                holdBackgroundOutlineSize,
+                holdBackgroundOutlineSize
+        );
+
+        holdBackgroundInnerPartPixmap.dispose();
+
+        holdBackgroundX += margin + playFieldWidth - holdBackgroundDimension;
+        float holdBackgroundY = screenHeight - 100 * ratioHeight - holdBackgroundDimension - 1;
+
+        holdPieceBackground =
+                new GameObject2D(holdBackgroundPixmap, holdBackgroundX, holdBackgroundY);
+
+        playStateObjects.add(holdPieceBackground);
+
+        // Create a background for incoming pieces list
+
+        int nextPieceBackgroundHeight = holdBackgroundDimension * 3;
+
+        Pixmap nextPieceBackgroundPixmap = Drawing.createRoundedRectangle(
+                holdBackgroundDimension * 2,
+                nextPieceBackgroundHeight,
+                holdBackgroundCornerRadius,
+                GameSuper.palette.secondary
+        );
+
+        Pixmap nextPieceBackgroundInnerPartPixmap = Drawing.createRoundedRectangle(
+                nextPieceBackgroundPixmap.getWidth() - holdBackgroundOutlineSize * 2,
+                nextPieceBackgroundPixmap.getHeight() - holdBackgroundOutlineSize * 2,
+                holdBackgroundCornerRadius - 2 * holdBackgroundOutlineSize,
+                Color.BLACK
+        );
+
+        nextPieceBackgroundPixmap.drawPixmap(
+                nextPieceBackgroundInnerPartPixmap,
+                holdBackgroundOutlineSize,
+                holdBackgroundOutlineSize
+        );
+
+        nextPieceBackgroundInnerPartPixmap.dispose();
+
+        nextPieceBackground = new GameObject2D(
+                nextPieceBackgroundPixmap,
+                holdBackgroundX,
+                holdBackgroundY - holdBackgroundDimension * 3 - margin
+        );
+        playStateObjects.add(nextPieceBackground);
+
+        nextPieceBackgroundPixmap.dispose();
+
+        // Create the Info button
+
+        int infoButtonDimension = Math.min(
+                playFieldHeight - holdBackgroundDimension - nextPieceBackgroundHeight - margin * 3,
+                screenWidth - playFieldWidth - (int) holdBackgroundX - margin * 4
+        );
+
+        int infoButtonRadius = infoButtonDimension / 2;
+        float infoButtonX = holdBackgroundX + holdBackgroundDimension + margin * 2;
+
+        Pixmap infoButtonPixmap = new Pixmap(
+                infoButtonDimension,
+                infoButtonDimension,
+                Pixmap.Format.RGBA8888
+        );
+
+        infoButtonPixmap.setColor(GameSuper.palette.primary);
+        infoButtonPixmap.fillCircle(infoButtonRadius, infoButtonRadius, infoButtonRadius);
+        infoButtonPixmap.fill();
+
+        /* TODO: The following code causes a GL memory leak
+        Pixmap infoButtonIconPixmap = Drawing.getIcon(
+                "help.png",
+                infoButtonDimension,
+                infoButtonDimension,
+                GameSuper.palette.secondary
+        );
+
+        infoButtonPixmap.drawPixmap(infoButtonIconPixmap, 0, 0);
+        infoButtonIconPixmap.dispose();
+        */
+
+
+        float infoButtonY = screenHeight - playFieldHeight - 100 * ratioHeight;
+
+        infoButton = new GameObject2D(infoButtonPixmap, infoButtonX, infoButtonY);
+        playStateObjects.add(infoButton);
+
+        infoButtonPixmap.dispose();
+
+        // Create a status overlay (shows the countdown and other info)
+
+        float gameStatusOverlayX = 50 * ratioWidth + 20;
+        int gameStatusOverlayHeight = playFieldHeight / 3;
+
+        Pixmap gameStatusOverlayPixmap = new Pixmap(
+                playFieldWidth,
+                gameStatusOverlayHeight,
+                Pixmap.Format.RGBA8888
+        );
+
+        Color gameStatusOverlayColor = new Color(GameSuper.palette.onPrimary);
+        gameStatusOverlayColor.a = .5f;
+
+        gameStatusOverlayPixmap.setColor(gameStatusOverlayColor);
+        gameStatusOverlayPixmap.fill();
+
+        gameStatusOverlay = new GameObject2D(
+                gameStatusOverlayPixmap,
+                gameStatusOverlayX,
+                holdBackgroundY + playFieldHeight / 3f
+        );
+
+        // Create the "Start Game" button
+
+        int startGameButtonWidth = gameStatusOverlay.getWidth() / 4 * 3;
+        String messageStartGame = "START GAME!";
+        int startGameButtonCornerRadius = margin;
+        int startGameButtonOutlineSize = 3;
+
+        FreeTypeFontGenerator.FreeTypeFontParameter startGameButtonFreetypeParameter =
+                new FreeTypeFontGenerator.FreeTypeFontParameter();
+
+        startGameButtonFreetypeParameter.size = startGameButtonWidth / messageStartGame.length();
+        startGameButtonFreetypeParameter.color = GameSuper.palette.secondary;
+
+        BitmapFont startGameButtonFont =
+                GameSuper.mainFontGenerator.generateFont(startGameButtonFreetypeParameter);
+
+        int startGameButtonHeight = (int) startGameButtonFont.getLineHeight() + margin;
+
+        Pixmap startGameButtonPixmap = Drawing.createRoundedRectangle(
+                startGameButtonWidth,
+                startGameButtonHeight,
+                startGameButtonCornerRadius,
+                GameSuper.palette.onPrimary
+        );
+
+        Pixmap startGameButtonInnerPartPixmap = Drawing.createRoundedRectangle(
+                startGameButtonWidth - startGameButtonOutlineSize * 2,
+                startGameButtonHeight - startGameButtonOutlineSize * 2,
+                startGameButtonCornerRadius - startGameButtonOutlineSize,
+                GameSuper.palette.primary
+        );
+
+        startGameButtonPixmap.drawPixmap(
+                startGameButtonInnerPartPixmap,
+                startGameButtonOutlineSize,
+                startGameButtonOutlineSize
+        );
+
+        float startGameButtonX = gameStatusOverlayX + (playFieldWidth - startGameButtonWidth) / 2f;
+        float startGameButtonY = gameStatusOverlay.getY() + margin;
+
+        startGameButton =
+                new GameObject2D(startGameButtonPixmap, startGameButtonX, startGameButtonY);
+
+        startGameButtonInnerPartPixmap.dispose();
+        startGameButtonPixmap.dispose();
+
+        // Create the "Start Game" label
+
+        Label.LabelStyle startGameLabelStyle =
+                new Label.LabelStyle(startGameButtonFont, Color.WHITE);
+
+        startGameLabel = new Label(messageStartGame, startGameLabelStyle);
+        startGameLabel.setSize(startGameButton.getWidth(), startGameButton.getHeight());
+        startGameLabel.setAlignment(Align.center);
+
+        startGameLabel.setPosition(
+                startGameButton.getX(),
+                startGameButton.getY(),
+                Align.bottomLeft
+        );
+
+        playStateStage.addActor(startGameLabel);
+
+        // Create the stats label (displays the countdown and place numbers)
+
+        int statsLabelHeight = gameStatusOverlayHeight - startGameButtonHeight - 3 * margin;
+
+        FreeTypeFontGenerator.FreeTypeFontParameter statsLabelFreetypeParameter =
+                new FreeTypeFontGenerator.FreeTypeFontParameter();
+
+        statsLabelFreetypeParameter.size = statsLabelHeight - 2 * margin;
+        statsLabelFreetypeParameter.color = GameSuper.palette.primary;
+        statsLabelFreetypeParameter.borderColor = GameSuper.palette.onPrimary;
+        statsLabelFreetypeParameter.borderWidth = 3;
+        statsLabelFreetypeParameter.characters = "0123456789snthd";
+
+        BitmapFont statsLabelFont =
+                GameSuper.mainFontGenerator.generateFont(statsLabelFreetypeParameter);
+
+        float statsLabelY = startGameButton.getY() + margin * 2;
+
+        Label.LabelStyle counterLabelStyle = new Label.LabelStyle(statsLabelFont, Color.WHITE);
+        statsLabel = new Label("4th", counterLabelStyle);
+        statsLabel.setPosition(startGameButton.getX(), statsLabelY, Align.bottomLeft);
+        statsLabel.setAlignment(Align.center);
+        statsLabel.setSize(startGameButton.getWidth(), statsLabelHeight);
+        statsLabel.setAlignment(Align.center);
+
+        playStateStage.addActor(statsLabel);
+
+        statsLabel.setText(getNumberWithSuffix(NetworkingManager.clientSideRoom.players.size()));
+
+
+        // Create the Score label
+
+        String messagePrefixScore = "SCORE: ";
+
+        FreeTypeFontGenerator.FreeTypeFontParameter scoreLabelFreetypeParameter =
+                new FreeTypeFontGenerator.FreeTypeFontParameter();
+
+        scoreLabelFreetypeParameter.color = GameSuper.palette.primary;
+        scoreLabelFreetypeParameter.size = (int) (50 * ratioHeight);
+
+        BitmapFont scoreLabelFont =
+                GameSuper.mainFontGenerator.generateFont(scoreLabelFreetypeParameter);
+
+        Label.LabelStyle scoreLabelStyle = new Label.LabelStyle(scoreLabelFont, Color.WHITE);
+
+        scoreLabel = new Label(messagePrefixScore, scoreLabelStyle);
+        scoreLabel.setPosition(0, 454 * ratioHeight, Align.bottomLeft);
+        scoreLabel.setSize(screenWidth, 50 * ratioHeight);
+        scoreLabel.setAlignment(Align.center);
+
+        playStateStage.addActor(scoreLabel);
+
+
+        Tetris.generateField();
+    }
+
+    private void initializeRoomInfoScene() {
+        int listEntryHeight = (screenHeight - 4 * margin) / 11;
+
+        // Create a background for controls on top
+
+        int topControlsBackgroundWidth = screenWidth - margin * 2;
+        float topControlsBackgroundY = topControlsBackgroundWidth - listEntryHeight;
+
+        Pixmap topControlsBackgroundPixmap = Drawing.createRoundedRectangle(
+            topControlsBackgroundWidth,
+                listEntryHeight,
+            listEntryHeight / 2 ,
+            GameSuper.palette.onSecondary
+        );
+
+        infoStateObjects
+                .add(new GameObject2D(topControlsBackgroundPixmap, margin, topControlsBackgroundY));
+
+        topControlsBackgroundPixmap.dispose();
+
+        // Create a button that returns you to the playing scene
+
+        Pixmap backButtonPixmap = Drawing.getIcon(
+            "left.png",
+            listEntryHeight,
+            listEntryHeight,
+            GameSuper.palette.secondary
+        );
+
+        backToPlayButton = new GameObject2D(backButtonPixmap, margin, topControlsBackgroundY);
+
+        backButtonPixmap.dispose();
+
+        // Create a button that allows you to leave the room
+
+
+        Pixmap buttonExitPixmap = Drawing.getIcon(
+            "exit.png",
+            listEntryHeight,
+            listEntryHeight,
+            GameSuper.palette.secondary
+        );
+
+        float buttonExitX = screenWidth - margin - buttonExitPixmap.getWidth();
+
+        exitGameButton = new GameObject2D(buttonExitPixmap, buttonExitX, backToPlayButton.getY());
+
+        // Create a label that displays room'roomAddress IP address
+
+        int maxIpAddressMessageLength = " [000.000.000.000]".length();
+        int textSize = (screenWidth - 2 * margin) / (10 + maxIpAddressMessageLength) * 2;
+
+        FreeTypeFontGenerator.FreeTypeFontParameter ipAddressFontParameter =
+                new FreeTypeFontGenerator.FreeTypeFontParameter();
+
+        ipAddressFontParameter.size = textSize;
+        ipAddressFontParameter.color = GameSuper.palette.secondary;
+
+        BitmapFont ipAddressMessageFont =
+                GameSuper.mainFontGenerator.generateFont(ipAddressFontParameter);
+
+        Label.LabelStyle ipAddressMessageLabelStyle =
+                new Label.LabelStyle(ipAddressMessageFont, Color.WHITE);
+
+        String roomAddress = "[" + networkAddress + "]";
+
+        Label headerLabel = new Label(roomAddress, ipAddressMessageLabelStyle);
+        headerLabel.setSize(topControlsBackgroundWidth, listEntryHeight);
+        headerLabel.setPosition(0, backToPlayButton.getY(), Align.bottomLeft);
+        headerLabel.setAlignment(Align.center);
+
+        infoStage.addActor(headerLabel);
+
+
+        // Create entries to display users in the room
+
+        int entryIconDimension = listEntryHeight - 2 * margin;
+
+        FreeTypeFontGenerator.FreeTypeFontParameter usernameFreetypeParameter =
+                new FreeTypeFontGenerator.FreeTypeFontParameter();
+
+        usernameFreetypeParameter.size = textSize;
+        usernameFreetypeParameter.color = GameSuper.palette.onSecondary;
+
+        BitmapFont usernameFont =
+                GameSuper.mainFontGenerator.generateFont(usernameFreetypeParameter);
+
+        Label.LabelStyle usernameLabelStyle = new Label.LabelStyle(usernameFont, Color.WHITE);
+
+        Pixmap profilePicturePixmap = Drawing.getIcon(
+            "profile-pic.png",
+            entryIconDimension,
+            entryIconDimension,
+            GameSuper.palette.onSecondary
+        );
+
+        Pixmap eyePixmap = Drawing.getIcon(
+            "eye.png",
+            entryIconDimension,
+            entryIconDimension,
+            GameSuper.palette.primary
+        );
+
+        Pixmap dividerPixmap =
+                new Pixmap(topControlsBackgroundWidth, 10, Pixmap.Format.RGB888);
+
+        dividerPixmap.setColor(GameSuper.palette.primary);
+        dividerPixmap.fill();
+
+        for (int i = 0; i < 10; i++) {
+            Label label = new Label("some text", usernameLabelStyle);
+            label.setAlignment(Align.left);
+            label.setPosition(listEntryHeight, listEntryHeight * (9 - i));
+            label.setSize(screenWidth - listEntryHeight, listEntryHeight);
+
+            playerInfoLabels.add(label);
+            infoStage.addActor(label);
+
+            float buttonY = listEntryHeight * (9 - i);
+            float dividerY = buttonY - dividerPixmap.getHeight() / 2f;
+            GameObject2D[] batch = new GameObject2D[3];
+
+            batch[0] = new GameObject2D(profilePicturePixmap, 0, buttonY);
+            batch[1] = new GameObject2D(eyePixmap, screenWidth - eyePixmap.getWidth(), buttonY);
+            batch[2] = new GameObject2D(dividerPixmap, margin, dividerY);
+
+            playerInfoCosmeticElements.add(batch);
+        }
+
+    }
+
+    private void initializeWatchingScene() {
+        // Creating a watching scene
+
+        int bottomPillWidth = screenWidth - 2 * margin;
+        int bottomPillHeight = screenHeight / 10;
+
+        Pixmap bottomPillBackgroundPixmap = Drawing.createRoundedRectangle(
+            bottomPillWidth,
+            bottomPillHeight,
+            bottomPillHeight / 2,
+            GameSuper.palette.onSecondary
+        );
+
+        Pixmap iconExitPixmap = Drawing.getIcon(
+            "left.png",
+            bottomPillHeight,
+            bottomPillHeight,
+            GameSuper.palette.secondary
+        );
+
+        bottomPillBackgroundPixmap.drawPixmap(iconExitPixmap, 0, 0);
+        watchingStateBackButton = new GameObject2D(bottomPillBackgroundPixmap, margin, margin);
+
+        iconExitPixmap.dispose();
+        bottomPillBackgroundPixmap.dispose();
+
+        // Create a label that displays current player's username
+
+        FreeTypeFontGenerator.FreeTypeFontParameter freetypeParameter =
+                new FreeTypeFontGenerator.FreeTypeFontParameter();
+
+        freetypeParameter.color = GameSuper.palette.secondary;
+
+        freetypeParameter.size = Math.min(
+            watchingStateBackButton.getHeight() - 2 * margin,
+            (watchingStateBackButton.getWidth() - 2 * watchingStateBackButton.getHeight()) / 10
+        );
+
+        BitmapFont font = GameSuper.mainFontGenerator.generateFont(freetypeParameter);
+
+
+        float usernameLabelWidth = bottomPillWidth - 2 * bottomPillHeight;
+
+        Label.LabelStyle labelStyle = new Label.LabelStyle(font, Color.WHITE);
+
+        watchingStatePlayerNameLabel = new Label("John Doe", labelStyle);
+        watchingStatePlayerNameLabel.setSize(usernameLabelWidth, bottomPillHeight);
+        watchingStatePlayerNameLabel.setAlignment(Align.center);
+        watchingStatePlayerNameLabel.setPosition(bottomPillHeight + margin, margin);
+
+        watchingStateStage.addActor(watchingStatePlayerNameLabel);
+
+        // Create a background stripe behind the play field
+
+        float backgroundStripeY = screenHeight / 10f + margin * 2;
+        int backgroundStripeHeight = screenHeight / 10 * 9 - 3 * margin;
+
+        Pixmap backgroundStripePixmap =
+                new Pixmap(screenWidth, backgroundStripeHeight, Pixmap.Format.RGB888);
+
+        backgroundStripePixmap.setColor(GameSuper.palette.primary);
+        backgroundStripePixmap.fill();
+        watchingStateObjects.add(new GameObject2D(backgroundStripePixmap, 0, backgroundStripeY));
+
+        backgroundStripePixmap.dispose();
+
+        // Draw a play field
+
+        int possibleFieldHeight =
+                (backgroundStripeHeight - 2 * margin - (int) font.getLineHeight());
+
+        int cellDimension = Math.min(
+            (screenWidth - 2 * margin) / Tetris.fieldWidth,
+            possibleFieldHeight / Tetris.fieldHeight
+        );
+
+        watchingStateFieldBackground = new Pixmap(
+            cellDimension * Tetris.fieldWidth,
+            cellDimension * Tetris.fieldHeight,
+            Pixmap.Format.RGB888
+        );
+
+        watchingStateFieldBackground.setColor(Color.BLACK);
+        watchingStateFieldBackground.fill();
+        watchingStateFieldBackground.setColor(GameSuper.palette.secondary);
+
+        for (int x = 0; x < Tetris.fieldWidth; x++) {
+            for (int y = 0; y < Tetris.fieldHeight; y++) {
+                watchingStateFieldBackground.drawRectangle(
+                    x * cellDimension,
+                    y * cellDimension,
+                    cellDimension,
+                    cellDimension
+                );
+            }
+        }
+
+        float scoreLabelY = screenHeight / 10f + margin * 5;
+        watchingStateScoreLabel = new Label("score label", labelStyle);
+        watchingStateScoreLabel.setPosition(0, scoreLabelY, Align.bottomLeft);
+        watchingStateScoreLabel.setSize(screenWidth, 2 * margin);
+        watchingStateScoreLabel.setAlignment(Align.top);
+
+        watchingStateStage.addActor(watchingStateScoreLabel);
+    }
 
     @Override
     public void show() {
-        try {
-            Socket socket = new Socket();
-            socket.connect(new InetSocketAddress("google.com", 80));
-            Gdx.app.log("INET", "Hosted / connected: " + socket.getLocalAddress());
-            networkAddress = socket.getLocalAddress().toString();
-        } catch (java.lang.Exception e) {
-            Gdx.app.log("INET", "Unable to get host name / address: " + e.toString());
-        }
+        checkInternetConnection();
 
         screenHeight = Gdx.graphics.getHeight();
         screenWidth = Gdx.graphics.getWidth();
         ratioWidth = screenWidth / 1080f;
         ratioHeight = screenHeight / 1920f;
-
         margin = (int)(20 * ratioWidth);
 
-        int h = (int)(172 * ratioWidth) * 2 + margin * 3, w = (int)(980 * ratioWidth);
-        Pixmap pixmap = Drawing.createRoundedRectangle(w, h, (int)(172 * ratioHeight) / 2, GameSuper.palette.primary);
-        playSateObjects.add(new GameObject2D(pixmap, (screenWidth - w) / 2f, 50 * ratioHeight));
-
-        h = (int)(172 * ratioWidth);
-
-        Pixmap circle = new Pixmap(h, h, Pixmap.Format.RGBA8888);
-        circle.setColor(GameSuper.palette.onSecondary);
-        circle.fillCircle(h / 2, h /2, h / 2);
-
-        float y = 50 * ratioHeight + margin;
-
-        pixmap = new Pixmap(h, h, Pixmap.Format.RGBA8888);
-        pixmap.drawPixmap(circle, 0, 0);
-        pixmap.drawPixmap(Drawing.getIcon("left.png", h, h, GameSuper.palette.secondary), 0, 0);
-        playSateObjects.add(new GameObject2D(pixmap, (screenWidth - w) / 2f + margin, y));
-        stepLeftButton = playSateObjects.get(playSateObjects.size() - 1);
-
-        pixmap = new Pixmap(h, h, Pixmap.Format.RGBA8888);
-        pixmap.drawPixmap(circle, 0, 0);
-        pixmap.drawPixmap(Drawing.getIcon("right.png", h, h, GameSuper.palette.secondary), 0, 0);
-        playSateObjects.add(new GameObject2D(pixmap, (screenWidth - w) / 2f + margin + h + margin, y));
-        stepRightButton = playSateObjects.get(playSateObjects.size() - 1);
-
-        pixmap = new Pixmap(h, h, Pixmap.Format.RGBA8888);
-        pixmap.drawPixmap(circle, 0, 0);
-        pixmap.drawPixmap(Drawing.getIcon("down.png", h, h, GameSuper.palette.secondary), 0, 0);
-        playSateObjects.add(new GameObject2D(pixmap, (screenWidth - w) / 2f + margin + h * 2 + margin * 2, y));
-        stepDownButton = playSateObjects.get(playSateObjects.size() - 1);
-
-        pixmap = new Pixmap(h, h, Pixmap.Format.RGBA8888);
-        pixmap.drawPixmap(circle, 0, 0);
-        pixmap.drawPixmap(Drawing.getIcon("clockwise.png", h, h, GameSuper.palette.secondary), 0, 0);
-        playSateObjects.add(new GameObject2D(pixmap, (screenWidth - w) / 2f + margin + h * 3 + margin * 3, y));
-        rotateClockwiseButton = playSateObjects.get(playSateObjects.size() - 1);
-
-        pixmap = new Pixmap(h, h, Pixmap.Format.RGBA8888);
-        pixmap.drawPixmap(circle, 0, 0);
-        pixmap.drawPixmap(Drawing.getIcon("anticlockwise.png", h, h, GameSuper.palette.secondary), 0, 0);
-        playSateObjects.add(new GameObject2D(pixmap, (screenWidth - w) / 2f + margin + h * 4 + margin * 4, y));
-        rotateAntiClockwiseButton = playSateObjects.get(playSateObjects.size() - 1);
-
-        y += h + margin;
-
-        pixmap = new Pixmap(h, h, Pixmap.Format.RGBA8888);
-        pixmap.drawPixmap(circle, 0, 0);
-        pixmap.drawPixmap(Drawing.getIcon("rotate180.png", h, h, GameSuper.palette.secondary), 0, 0);
-        playSateObjects.add(new GameObject2D(pixmap, (screenWidth - w) / 2f + margin + h * 2 + margin * 2, y));
-        rotate180Button = playSateObjects.get(playSateObjects.size() - 1);
-
-        pixmap = new Pixmap(h, h, Pixmap.Format.RGBA8888);
-        pixmap.drawPixmap(circle, 0, 0);
-        pixmap.drawPixmap(Drawing.getIcon("exchange.png", h, h, GameSuper.palette.secondary), 0, 0);
-        playSateObjects.add(new GameObject2D(pixmap, (screenWidth - w) / 2f + margin + h * 3 + margin * 3, y));
-        exchangeButton = playSateObjects.get(playSateObjects.size() - 1);
-
-        pixmap = new Pixmap(h, h, Pixmap.Format.RGBA8888);
-        pixmap.drawPixmap(circle, 0, 0);
-        pixmap.drawPixmap(Drawing.getIcon("instant.png", h, h, GameSuper.palette.secondary), 0, 0);
-        playSateObjects.add(new GameObject2D(pixmap, (screenWidth - w) / 2f + margin + h * 4 + margin * 4, y));
-        instantPlaceButton = playSateObjects.get(playSateObjects.size() - 1);
-
-        int cellDimension = (int)(63.3 * ratioHeight);
-        int playFieldWidth = 10 * cellDimension, playFieldHeight = 20 * cellDimension;
-        playFieldPixmap = new Pixmap(playFieldWidth, playFieldHeight, Pixmap.Format.RGB888);
-        playFieldPixmap.setColor(Color.BLACK);
-        playFieldPixmap.fill();
-        playFieldPixmap.setColor(GameSuper.palette.secondary);
-        playFieldPixmap.drawRectangle(0, 0, playFieldWidth, playFieldHeight);
-        for (int px = 0; px < 10; px++) for (int py = 0; py < 20; py++)
-            playFieldPixmap.drawRectangle(px * cellDimension, py * cellDimension, cellDimension, cellDimension);
-
-        pixmap = new Pixmap(screenWidth, playFieldHeight + (int)(100 * ratioHeight), Pixmap.Format.RGB888);
-        pixmap.setColor(GameSuper.palette.onSecondary);
-        pixmap.fill();
-        playSateObjects.add(new GameObject2D(pixmap, 0, screenHeight - 50 * ratioHeight - pixmap.getHeight()));
-
-        float x = 50;
-        y = screenHeight - playFieldHeight - 100 * ratioHeight;
-
-        w = screenWidth - (int)x * 2 - playFieldWidth - 20;
-        pixmap = Drawing.createRoundedRectangle(w * 2, w, margin, GameSuper.palette.secondary);
-        pixmap.drawPixmap(Drawing.createRoundedRectangle(pixmap.getWidth() - 10,
-                pixmap.getHeight() - 10, margin, Color.BLACK), 5, 5);
-        playSateObjects.add(new GameObject2D(pixmap,
-                x + 20 + playFieldWidth - pixmap.getWidth() / 2f, y + playFieldHeight - pixmap.getHeight() - 1));
-        holdBG = playSateObjects.get(playSateObjects.size() - 1);
-
-        pixmap = Drawing.createRoundedRectangle(pixmap.getWidth(), pixmap.getHeight() * 3, margin, GameSuper.palette.secondary);
-        pixmap.drawPixmap(Drawing.createRoundedRectangle(pixmap.getWidth() - 10, pixmap.getHeight() - 10,
-                10, Color.BLACK), 5, 5);
-        playSateObjects.add(new GameObject2D(pixmap, holdBG.getX(), holdBG.getY() - holdBG.getHeight() * 3 - margin));
-        nextPieceBG = playSateObjects.get(playSateObjects.size() - 1);
-
-        w = Math.min(playFieldHeight - 2 * margin - holdBG.getHeight() - nextPieceBG.getHeight() - margin,
-                screenWidth - playFieldWidth - (int)x - margin * 4);
-        pixmap = new Pixmap(w, w, Pixmap.Format.RGBA8888);
-        pixmap.setColor(GameSuper.palette.primary);
-        pixmap.fillCircle(pixmap.getWidth() / 2, pixmap.getHeight() / 2, w / 2);
-        pixmap.drawPixmap(Drawing.getIcon("help.png", w, w, GameSuper.palette.secondary), 0, 0);
-        playSateObjects.add(new GameObject2D(pixmap, holdBG.getX() + holdBG.getWidth() / 2f + margin * 2, y));
-        playStateInfoButton = playSateObjects.get(playSateObjects.size() - 1);
-
-        x = 50 * ratioWidth + 20;
-
-        pixmap = new Pixmap(playFieldWidth, playFieldHeight / 3, Pixmap.Format.RGBA8888);
-        Color color = new Color(GameSuper.palette.onPrimary);
-        color.a = .5f;
-        pixmap.setColor(color);
-        pixmap.fill();
-        gameStatusOverlay = new GameObject2D(pixmap, x, y + playFieldHeight / 3f);
-
-        w = gameStatusOverlay.getWidth() / 4 * 3;
-
-        FreeTypeFontGenerator.FreeTypeFontParameter parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        parameter.size = w / "START GAME".length();
-        parameter.color = GameSuper.palette.secondary;
-
-        BitmapFont font = GameSuper.mainFontGenerator.generateFont(parameter);
-
-        pixmap = Drawing.createRoundedRectangle(w, (int)font.getLineHeight() + margin, margin, GameSuper.palette.onPrimary);
-        pixmap.drawPixmap(Drawing.createRoundedRectangle(pixmap.getWidth() - 6, pixmap.getHeight() - 6,
-                margin - 3, GameSuper.palette.primary), 3, 3);
-        startGameButton = new GameObject2D(pixmap,
-                gameStatusOverlay.getX() + (gameStatusOverlay.getWidth() - pixmap.getWidth()) / 2f,
-                gameStatusOverlay.getY() + margin);
-
-        Label.LabelStyle labelStyle = new Label.LabelStyle(font, Color.WHITE);
-
-        startGameLabel = new Label("START GAME!", labelStyle);
-        startGameLabel.setSize(startGameButton.getWidth(), startGameButton.getHeight());
-        startGameLabel.setAlignment(Align.center);
-        startGameLabel.setPosition(startGameButton.getX(), startGameButton.getY(), Align.bottomLeft);
-        playStateStage.addActor(startGameLabel);
-
-        h = gameStatusOverlay.getHeight() - startGameButton.getHeight() - 3 * margin;;
-
-        parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        parameter.size = h - 2 * margin;
-        parameter.color = GameSuper.palette.primary;
-        parameter.borderColor = GameSuper.palette.onPrimary;
-        parameter.borderWidth = 3;
-        parameter.characters = "0123456789snthd";
-
-        font = GameSuper.mainFontGenerator.generateFont(parameter);
-
-        labelStyle = new Label.LabelStyle(font, Color.WHITE);
-
-        statsLabel = new Label("4th", labelStyle);
-        statsLabel.setPosition(startGameButton.getX(),
-                startGameButton.getY() + margin * 2, Align.bottomLeft);
-        statsLabel.setAlignment(Align.center);
-        statsLabel.setSize(startGameButton.getWidth(), h);
-        statsLabel.setAlignment(Align.center);
-        playStateStage.addActor(statsLabel);
-
-        statsLabel.setText(getNumberWithSuffix(NetworkingManager.clientSideRoom.players.size()));
-
-        parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        parameter.color = GameSuper.palette.primary;
-        parameter.size = (int)(50 * ratioHeight);
-
-        font = GameSuper.mainFontGenerator.generateFont(parameter);
-
-        Label.LabelStyle scoreLabelStyle = new Label.LabelStyle(font, Color.WHITE);
-
-        scoreLabel = new Label("SCORE: ", scoreLabelStyle);
-        scoreLabel.setPosition(0, 454 * ratioHeight, Align.bottomLeft);
-        scoreLabel.setSize(screenWidth, 50 * ratioHeight);
-        scoreLabel.setAlignment(Align.center);
-        playStateStage.addActor(scoreLabel);
-
-        Tetris.generateField();
+        initializePlayScene();
+        Gdx.app.log("TAG", "1");
+        initializeRoomInfoScene();
+        Gdx.app.log("TAG", "2");
+        initializeWatchingScene();
+        Gdx.app.log("TAG", "3");
 
         Gdx.input.setInputProcessor(stage);
-
-        //Info Scene
-        int unitHeight = (screenHeight - 4 * margin) / 11;
-
-        pixmap = Drawing.createRoundedRectangle(screenWidth - margin * 2, unitHeight, unitHeight / 2, GameSuper.palette.onSecondary);
-        infoStateObjects.add(new GameObject2D(pixmap, margin, screenHeight - pixmap.getHeight() - 2 * margin));
-
-        pixmap = Drawing.getIcon("left.png", unitHeight, unitHeight, GameSuper.palette.secondary);
-        backToPlayButton = new GameObject2D(pixmap, margin, infoStateObjects.get(0).getY());
-
-        pixmap = Drawing.getIcon("exit.png", unitHeight, unitHeight, GameSuper.palette.secondary);
-        exitGameButton = new GameObject2D(pixmap, screenWidth - margin - pixmap.getWidth(), backToPlayButton.getY());
-
-        parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        parameter.size = (screenWidth - 2 * margin) / (10 + " [000.000.000.000]".length()) * 2;
-        parameter.color = GameSuper.palette.secondary;
-
-        font = GameSuper.mainFontGenerator.generateFont(parameter);
-
-        labelStyle = new Label.LabelStyle(font, Color.WHITE);
-
-        String s = "[" + networkAddress + "]";
-        headerLabel = new Label(s, labelStyle);
-        headerLabel.setSize(screenWidth - 2 * margin, unitHeight);
-        headerLabel.setPosition(0, backToPlayButton.getY(), Align.bottomLeft);
-        headerLabel.setAlignment(Align.center);
-        infoStage.addActor(headerLabel);
-
-        parameter.color = GameSuper.palette.onSecondary;
-
-        font = GameSuper.mainFontGenerator.generateFont(parameter);
-
-        labelStyle = new Label.LabelStyle(font, Color.WHITE);
-
-        Pixmap pic = Drawing.getIcon("profile-pic.png", unitHeight - 2 * margin, unitHeight - 2 * margin, GameSuper.palette.onSecondary);
-
-        Pixmap eye = Drawing.getIcon("eye.png", pic.getWidth() - 2 * margin, pic.getHeight() - 2 * margin, GameSuper.palette.primary);
-
-        Pixmap divider = new Pixmap(screenWidth - 2 * margin, 10, Pixmap.Format.RGB888);
-        divider.setColor(GameSuper.palette.primary);
-        divider.fill();
-
-        for (int i = 0; i < 10; i++){
-            Label label = new Label("some text", labelStyle);
-            label.setAlignment(Align.left);
-            label.setPosition(unitHeight, unitHeight * (9 - i));
-            label.setSize(screenWidth - unitHeight, unitHeight);
-            playerInfoLabels.add(label);
-            infoStage.addActor(playerInfoLabels.get(i));
-
-            GameObject2D[] batch = new GameObject2D[3];
-
-            batch[0] = new GameObject2D(pic, 0, unitHeight * (9 - i));
-            batch[1] = new GameObject2D(eye, screenWidth - eye.getWidth(), unitHeight * (9 - i));
-            batch[2] = new GameObject2D(divider, margin, unitHeight * (9 - i) - divider.getHeight() / 2f);
-            playerInfoCosmeticElements.add(batch);
-        }
-
-        // Creating a watching scene
-        pixmap = Drawing.createRoundedRectangle(screenWidth - 2 * margin, screenHeight / 10, screenHeight / 10 / 2, GameSuper.palette.onSecondary);
-        pixmap.drawPixmap(Drawing.getIcon("left.png", pixmap.getHeight(), pixmap.getHeight(), GameSuper.palette.secondary), 0, 0);
-        watchingStateBackButton = new GameObject2D(pixmap, margin, margin);
-        pixmap.dispose();
-
-        parameter = new FreeTypeFontGenerator.FreeTypeFontParameter();
-        parameter.color = GameSuper.palette.secondary;
-        parameter.size = Math.min(watchingStateBackButton.getHeight() - 2 * margin,
-                (watchingStateBackButton.getWidth() - 2 * watchingStateBackButton.getHeight()) / 10);
-
-        font = GameSuper.mainFontGenerator.generateFont(parameter);
-
-        watchingStatePlayerNameLabel = new Label("John Doe", new Label.LabelStyle(font, Color.WHITE));
-        watchingStatePlayerNameLabel.setSize(watchingStateBackButton.getWidth() - 2 * watchingStateBackButton.getHeight(),
-                watchingStateBackButton.getHeight());
-        watchingStatePlayerNameLabel.setAlignment(Align.center);
-        watchingStatePlayerNameLabel.setPosition(watchingStateBackButton.getHeight() + margin, margin);
-        watchingStateStage.addActor(watchingStatePlayerNameLabel);
-
-        pixmap = new Pixmap(screenWidth, screenHeight / 10 * 9 - 3 * margin, Pixmap.Format.RGB888);
-        pixmap.setColor(GameSuper.palette.primary);
-        pixmap.fill();
-        watchingStateObjects.add(new GameObject2D(pixmap, 0, screenHeight / 10f + margin * 2));
-
-        cellDimension = Math.min((pixmap.getWidth() - 2 * margin) / Tetris.fieldWidth,
-                (pixmap.getHeight() - 2 * margin - (int)font.getLineHeight()) / Tetris.fieldHeight);
-        watchingStateFieldBG = new Pixmap(cellDimension * Tetris.fieldWidth, cellDimension * Tetris.fieldHeight, Pixmap.Format.RGB888);
-        watchingStateFieldBG.setColor(Color.BLACK);
-        watchingStateFieldBG.fill();
-        watchingStateFieldBG.setColor(GameSuper.palette.secondary);
-        for (int fx = 0; fx < Tetris.fieldWidth; fx++) {
-            for (int fy = 0; fy < Tetris.fieldHeight; fy++) {
-                watchingStateFieldBG.drawRectangle(fx * cellDimension, fy * cellDimension, cellDimension, cellDimension);
-            }
-        }
-        pixmap.dispose();
-
-        parameter.size = 4 * margin;
-
-        font = GameSuper.mainFontGenerator.generateFont(parameter);
-
-        watchingStateScoreLabel = new Label("score label", new Label.LabelStyle(font, Color.WHITE));
-        watchingStateScoreLabel.setPosition(0, screenHeight / 10f + margin + margin + margin + margin * 2, Align.bottomLeft);
-        watchingStateScoreLabel.setSize(screenWidth, 2 * margin);
-        watchingStateScoreLabel.setAlignment(Align.top);
-        watchingStateStage.addActor(watchingStateScoreLabel);
-    }
-
-    private String getNumberWithSuffix(int number){
-        switch (number % 10){
-            case 1:
-                return Integer.toString(number) + "st";
-            case 2:
-                return Integer.toString(number) + "nd";
-            default:
-                return Integer.toString(number) + "th";
-        }
     }
 
     @Override
@@ -440,7 +863,7 @@ public class PlayScreen implements Screen {
             int x = Gdx.input.getX(), y = screenHeight - Gdx.input.getY();
             if (state == STATE_PLAYING) {
                 if (startGameButton.contains()) NetworkingManager.client.sendTCP(new Networking.StartGameRequest());
-                else if (playStateInfoButton.contains()) state = STATE_INFO;
+                else if (infoButton.contains()) state = STATE_INFO;
                 else if (stepLeftButton.contains()) Tetris.moveLeft();
                 else if (stepRightButton.contains()) Tetris.moveRight();
                 else if (instantPlaceButton.contains()) Tetris.instantDown();
@@ -504,7 +927,7 @@ public class PlayScreen implements Screen {
 
         spriteBatch.begin();
         if (state == STATE_PLAYING) {
-            for (GameObject2D o : playSateObjects) spriteBatch.draw(o);
+            for (GameObject2D o : playStateObjects) spriteBatch.draw(o);
 
             GameObject2D field, stack;
 
@@ -591,17 +1014,17 @@ public class PlayScreen implements Screen {
             GameObject2D holdObject = null;
             if (NetworkingManager.playerInfo.holdID != -1) {
                 int[][] hold = Tetris.figures[NetworkingManager.playerInfo.holdID][0].clone();
-                pixmap = new Pixmap(holdBG.getWidth(), holdBG.getHeight(), Pixmap.Format.RGBA8888);
-                cellSize = Math.min((holdBG.getWidth() / 2 - 2 * margin) / hold[0].length, (holdBG.getHeight() - 2 * margin) / hold.length);
+                pixmap = new Pixmap(holdPieceBackground.getWidth(), holdPieceBackground.getHeight(), Pixmap.Format.RGBA8888);
+                cellSize = Math.min((holdPieceBackground.getWidth() / 2 - 2 * margin) / hold[0].length, (holdPieceBackground.getHeight() - 2 * margin) / hold.length);
                 if (!NetworkingManager.playerInfo.holdPerformed) pixmap.setColor(Tetris.figureColors.clone()[NetworkingManager.playerInfo.holdID]);
                 else pixmap.setColor(Color.GRAY);
                 for (int fx = 0; fx < hold[0].length; fx++) {
                     for (int fy = 0 ; fy < hold.length; fy++) {
                         if (hold[fy][fx] == 1)
-                            pixmap.fillRectangle(holdBG.getWidth() / 2 + margin + fx * cellSize, (int)(margin * 1.5f + fy * cellSize), cellSize, cellSize);
+                            pixmap.fillRectangle(holdPieceBackground.getWidth() / 2 + margin + fx * cellSize, (int)(margin * 1.5f + fy * cellSize), cellSize, cellSize);
                     }
                 }
-                holdObject = new GameObject2D(pixmap, holdBG.getX(), holdBG.getY());
+                holdObject = new GameObject2D(pixmap, holdPieceBackground.getX(), holdPieceBackground.getY());
                 spriteBatch.draw(holdObject);
                 pixmap.dispose();
             }
@@ -609,7 +1032,7 @@ public class PlayScreen implements Screen {
             spriteBatch.end();
 
 
-            int slotWidth = Math.min((nextPieceBG.getHeight() - margin) / 4, nextPieceBG.getWidth() / 2);
+            int slotWidth = Math.min((nextPieceBackground.getHeight() - margin) / 4, nextPieceBackground.getWidth() / 2);
             // Drawing next pieces
             for (int i = 1; i <= 4; i++){
                 pixmap = new Pixmap(slotWidth, slotWidth, Pixmap.Format.RGBA8888);
@@ -622,8 +1045,8 @@ public class PlayScreen implements Screen {
                         if (nextFigure[fy][fx] == 1) pixmap.fillRectangle(margin * 2 + fx * cellSize, margin * 2 + fy * cellSize, cellSize, cellSize);
                     }
                 }
-                GameObject2D o = new GameObject2D(pixmap, nextPieceBG.getX() + nextPieceBG.getWidth() / 2f,
-                        nextPieceBG.getY() + nextPieceBG.getHeight() - i * slotWidth);
+                GameObject2D o = new GameObject2D(pixmap, nextPieceBackground.getX() + nextPieceBackground.getWidth() / 2f,
+                        nextPieceBackground.getY() + nextPieceBackground.getHeight() - i * slotWidth);
                 spriteBatch.begin();
                 spriteBatch.draw(o);
                 spriteBatch.end();
@@ -670,8 +1093,8 @@ public class PlayScreen implements Screen {
             infoStage.draw();
         }
         else if (state == STATE_WATCHING) {
-            Pixmap field = new Pixmap(watchingStateFieldBG.getWidth(), watchingStateFieldBG.getHeight(), Pixmap.Format.RGB888);
-            field.drawPixmap(watchingStateFieldBG, 0, 0);
+            Pixmap field = new Pixmap(watchingStateFieldBackground.getWidth(), watchingStateFieldBackground.getHeight(), Pixmap.Format.RGB888);
+            field.drawPixmap(watchingStateFieldBackground, 0, 0);
 
             Networking.PlayerContainer player = null;
             for (int i = 0; i < NetworkingManager.clientSideRoom.players.size(); i++) {
@@ -705,7 +1128,7 @@ public class PlayScreen implements Screen {
             else state = STATE_INFO;
 
             GameObject2D fieldObject = new GameObject2D(field, screenWidth / 2f - field.getWidth() / 2f,
-                    screenHeight - margin - watchingStateFieldBG.getHeight() - margin);
+                    screenHeight - margin - watchingStateFieldBackground.getHeight() - margin);
 
             Pixmap pixmap = new Pixmap(20, field.getHeight(), Pixmap.Format.RGB888);
             pixmap.setColor(Color.BLACK);
@@ -775,6 +1198,7 @@ public class PlayScreen implements Screen {
         NetworkingManager.client.sendTCP(new Networking.UpdatedGameStateRequest());
 
         // Transition animation
+
         float newDelta = delta;
         if (newDelta > 1 / 60f) newDelta = 1 / 60f;
         if (nextScreen != null) {
@@ -802,31 +1226,23 @@ public class PlayScreen implements Screen {
         pad.dispose();
         padObject.dispose();
 
-        if (fadeOutAnimationProgress == -1) fadeOutAnimationProgress = 1;
+        if (fadeOutAnimationProgress == -1)
+            fadeOutAnimationProgress = 1;
     }
 
     @Override
-    public void resize(int width, int height) {
-
-    }
+    public void resize(int width, int height) { }
 
     @Override
-    public void pause() {
-
-    }
+    public void pause() { }
 
     @Override
-    public void resume() {
-
-    }
+    public void resume() { }
 
     @Override
-    public void hide() {
-
-    }
+    public void hide() { }
 
     @Override
-    public void dispose() {
+    public void dispose() { }
 
-    }
 }

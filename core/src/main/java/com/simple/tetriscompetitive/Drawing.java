@@ -103,15 +103,15 @@ public class Drawing {
         Pixmap resizedPixmap = new Pixmap(width, height, Pixmap.Format.RGBA8888);
 
         resizedPixmap.drawPixmap(
-            initialPixmap,
-            0,
-            0,
-            initialPixmap.getWidth(),
-            initialPixmap.getHeight(),
-            0,
-            0,
-            width,
-            height
+                initialPixmap,
+                0,
+                0,
+                initialPixmap.getWidth(),
+                initialPixmap.getHeight(),
+                0,
+                0,
+                width,
+                height
         );
 
         resizedPixmap.setColor(color);
@@ -121,6 +121,8 @@ public class Drawing {
                     resizedPixmap.drawPixel(x, y);
             }
         }
+
+        initialPixmap.dispose();
 
         return resizedPixmap;
     }
